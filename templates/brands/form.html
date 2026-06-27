@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if brand else 'Nova' }} Marca{% endblock %}
+{% block page_title %}{{ 'Editar' if brand else 'Nova' }} Marca{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome da Marca *</label>
+            <input type="text" name="name" class="form-control" value="{{ brand.name if brand else '' }}" required autofocus placeholder="Ex: Tom Ford">
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">País de Origem</label>
+            <input type="text" name="country" class="form-control" value="{{ brand.country if brand else '' }}" placeholder="Ex: EUA, França, Itália">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <a href="{{ url_for('brands') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

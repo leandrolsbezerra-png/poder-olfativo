@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}{{ customer.name }}{% endblock %}
+{% block page_title %}{{ customer.name }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('customer_edit', id=customer.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+  <a href="{{ url_for('order_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Novo Pedido</a>
+{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-3">
+    <div class="card mb-3">
+      <div class="card-header p-3 fw-semibold">Dados</div>
+      <div class="card-body small">
+        {% if customer.phone %}<div class="mb-1"><i class="bi bi-telephone me-1 text-muted"></i>{{ customer.phone }}</div>{% endif %}
+        {% if customer.email %}<div class="mb-1"><i class="bi bi-envelope me-1 text-muted"></i>{{ customer.email }}</div>{% endif %}
+        {% if customer.street %}
+        <hr class="my-2">
+        <div class="text-muted">
+          {{ customer.street }}, {{ customer.number }}{% if customer.complement %} — {{ customer.complement }}{% endif %}<br>
+          {% if customer.neighborhood %}{{ customer.neighborhood }}, {% endif %}{{ customer.city }}/{{ customer.state }}<br>
+          CEP: {{ customer.cep }}
+        </div>
+        {% endif %}
+        {% if customer.notes %}<hr class="my-2"><p class="text-muted mb-0">{{ customer.notes }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header p-3 fw-semibold">Resumo</div>
+      <div class="card-body">
+        <div class="text-center py-2">
+          <div class="display-6 fw-bold" style="color:#c9a96e">R$ {{ '%.2f'|format(total_spent) }}</div>
+          <div class="text-muted small">total gasto</div>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between small"><span class="text-muted">Compras</span><strong>{{ sales|length }}</strong></div>
+        <div class="d-flex justify-content-between small mt-1"><span class="text-muted">Pedidos</span><strong>{{ orders|length }}</strong></div>
+        {% if sales|length %}<div class="d-flex justify-content-between small mt-1"><span class="text-muted">Ticket médio</span><strong>R$ {{ '%.2f'|format(total_spent / sales|length) }}</strong></div>{% endif %}
+      </div>
+    </div>
+    {% if top_perfumes %}
+    <div class="card">
+      <div class="card-header p-3 fw-semibold">Favoritos</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <tbody>
+          {% for p in top_perfumes %}
+          <tr>
+            <td class="small">{{ p.product_label }}</td>
+            <td class="text-end text-muted small">{{ p.qty|int }}x</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="col-md-9">
+    {% if orders %}
+    <div class="card mb-3">
+      <div class="card-header p-3 fw-semibold">Pedidos em Aberto</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>#</th><th>Data</th><th class="text-end">Total</th><th>Status</th><th>Rastreio</th></tr></thead>
+          <tbody>
+          {% for o in orders %}
+          <tr>
+            <td><a href="{{ url_for('order_detail', id=o.id) }}" class="text-decoration-none fw-semibold">#{{ o.id }}</a></td>
+            <td class="text-muted small">{{ o.created_at[:10] if o.created_at else '—' }}</td>
+            <td class="text-end">R$ {{ '%.2f'|format(o.total) }}</td>
+            <td><span class="badge bg-{{ STATUS_COLOR[o.status] }}">{{ STATUS_LABEL[o.status] }}</span></td>
+            <td class="text-muted small">{{ o.tracking_code or '—' }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+    <div class="card">
+      <div class="card-header p-3 fw-semibold">Histórico de Compras</div>
+      <div class="card-body p-0">
+        <table class="table mb-0">
+          <thead><tr><th>#</th><th>Data</th><th>Produtos</th><th>Pagamento</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+          {% for s in sales %}
+          <tr>
+            <td><a href="{{ url_for('sale_detail', id=s.id) }}" class="fw-semibold text-decoration-none">#{{ s.id }}</a></td>
+            <td class="text-muted small">{{ s.sale_date[8:10] }}/{{ s.sale_date[5:7] }}/{{ s.sale_date[:4] }}</td>
+            <td class="small">
+              {% if s.items_detail %}
+                {% for item in s.items_detail.split(' | ') %}
+                <div>{{ item }}</div>
+                {% endfor %}
+              {% else %}—{% endif %}
+            </td>
+            <td><span class="badge bg-light text-dark">{{ s.payment_method }}</span></td>
+            <td class="text-end fw-semibold">R$ {{ '%.2f'|format(s.total) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma compra registrada.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

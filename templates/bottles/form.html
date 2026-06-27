@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Registrar Frasco Original{% endblock %}
+{% block page_title %}Registrar Frasco Original{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="alert alert-light border small mb-4">
+          Registre aqui cada frasco original que você comprar. O sistema calculará automaticamente o custo por ml para usar no fracionamento.
+        </div>
+        <form method="post">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Perfume *</label>
+              <select name="perfume_id" class="form-select" required id="perfumeSelect">
+                <option value="">— Selecione —</option>
+                {% for p in perfumes %}
+                <option value="{{ p.id }}" {{ 'selected' if request.args.get('perfume_id')==p.id|string }}>
+                  {{ p.brand_name }} — {{ p.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Volume do Frasco (ml) *</label>
+              <select name="volume_ml" class="form-select" id="volSelect" onchange="calcCostPerMl()">
+                {% for v in [30,50,75,100,125,150,200,250] %}
+                <option value="{{ v }}">{{ v }}ml</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Custo de Compra (R$) *</label>
+              <input type="number" name="cost_price" id="costInput" class="form-control" step="0.01" min="0.01" required placeholder="0.00" oninput="calcCostPerMl()">
+            </div>
+            <div class="col-12">
+              <div id="costPreview" class="alert alert-light border py-2 small d-none"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Fornecedor</label>
+              <select name="supplier_id" class="form-select">
+                <option value="">— Sem fornecedor —</option>
+                {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Data da Compra</label>
+              <input type="date" name="purchase_date" class="form-control" value="{{ now[:10] if now else '' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Observações</label>
+              <input type="text" name="notes" class="form-control" placeholder="Lote, número NF, etc.">
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">Registrar Frasco</button>
+            <a href="{{ url_for('bottles') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function calcCostPerMl() {
+  const vol = parseFloat(document.getElementById('volSelect').value) || 0;
+  const cost = parseFloat(document.getElementById('costInput').value) || 0;
+  const el = document.getElementById('costPreview');
+  if (vol > 0 && cost > 0) {
+    const cpm = cost / vol;
+    el.innerHTML = `Custo por ml: <strong>R$ ${cpm.toFixed(4)}</strong> — Este valor será usado para calcular o custo de cada decant.`;
+    el.classList.remove('d-none');
+  } else { el.classList.add('d-none'); }
+}
+</script>
+{% endblock %}

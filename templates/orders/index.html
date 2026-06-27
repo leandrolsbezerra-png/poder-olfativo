@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Pedidos{% endblock %}
+{% block page_title %}Pedidos / Encomendas{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('order_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Novo Pedido</a>
+  <a href="{{ url_for('export_orders_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>CSV</a>
+{% endblock %}
+{% block content %}
+
+<!-- Status tabs -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="{{ url_for('orders') }}" class="btn btn-sm {{ 'btn-dark' if not status_filter else 'btn-outline-secondary' }}">
+    Todos <span class="badge bg-secondary ms-1">{{ counts.values()|sum }}</span>
+  </a>
+  {% for s, label, color in ORDER_STATUSES %}
+  <a href="{{ url_for('orders', status=s) }}" class="btn btn-sm {{ ('btn-'+color) if status_filter==s else ('btn-outline-'+color) }}">
+    {{ label }} {% if counts.get(s) %}<span class="badge bg-white text-dark ms-1">{{ counts[s] }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead><tr><th>#</th><th>Cliente</th><th>Data</th><th>Itens</th><th class="text-end">Total</th><th>Status</th><th>Rastreio</th><th></th></tr></thead>
+      <tbody>
+      {% for o in orders %}
+      <tr>
+        <td><a href="{{ url_for('order_detail', id=o.id) }}" class="fw-semibold text-decoration-none">#{{ o.id }}</a></td>
+        <td>{{ o.customer_name }}</td>
+        <td class="text-muted small">{{ o.created_at[:10] if o.created_at else '—' }}</td>
+        <td class="text-muted small">—</td>
+        <td class="text-end fw-semibold">R$ {{ '%.2f'|format(o.total) }}</td>
+        <td><span class="badge bg-{{ STATUS_COLOR[o.status] }}">{{ STATUS_LABEL[o.status] }}</span></td>
+        <td class="text-muted small">{{ o.tracking_code or '—' }}</td>
+        <td><a href="{{ url_for('order_detail', id=o.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">Nenhum pedido encontrado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

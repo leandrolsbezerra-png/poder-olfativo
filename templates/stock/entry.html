@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Entrada de Estoque{% endblock %}
+{% block page_title %}Entrada de Estoque{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-success">
+      <div class="card-header p-3 text-success fw-semibold"><i class="bi bi-box-arrow-in-down me-1"></i>Registrar Entrada</div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Produto *</label>
+            <select name="product_id" class="form-select" required id="prodSel" onchange="updateStock()">
+              <option value="">— Selecione —</option>
+              {% for p in products %}
+              <option value="{{ p.id }}" data-stock="{{ p.stock_quantity }}" data-unit="{{ p.unit }}">{{ p.name }} ({{ p.stock_quantity|int }} {{ p.unit }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Quantidade *</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required id="qty" oninput="updatePreview()">
+            <small class="text-muted" id="stockInfo"></small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Custo Unitário (R$)</label>
+            <input type="number" name="unit_cost" class="form-control" step="0.01" min="0" placeholder="0.00">
+            <small class="text-muted">Atualiza o custo do produto se preenchido</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Motivo</label>
+            <select name="reason" class="form-select">
+              <option>Compra</option>
+              <option>Devolução de cliente</option>
+              <option>Transferência</option>
+              <option>Ajuste de inventário</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Observações</label>
+            <input type="text" name="notes" class="form-control" placeholder="Opcional…">
+          </div>
+          <div id="preview" class="alert alert-success d-none py-2 small mb-3"></div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success px-4">Registrar Entrada</button>
+            <a href="{{ url_for('stock_movements') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function updateStock() {
+  const sel = document.getElementById('prodSel');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('stockInfo').textContent = opt.value ? `Estoque atual: ${opt.dataset.stock} ${opt.dataset.unit}` : '';
+  updatePreview();
+}
+function updatePreview() {
+  const sel = document.getElementById('prodSel');
+  const opt = sel.options[sel.selectedIndex];
+  const qty = parseFloat(document.getElementById('qty').value) || 0;
+  const el = document.getElementById('preview');
+  if (opt.value && qty > 0) {
+    const newStock = parseFloat(opt.dataset.stock) + qty;
+    el.textContent = `Novo estoque após entrada: ${newStock.toFixed(0)} ${opt.dataset.unit}`;
+    el.classList.remove('d-none');
+  } else { el.classList.add('d-none'); }
+}
+</script>
+{% endblock %}

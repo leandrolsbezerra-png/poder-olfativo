@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}DRE {{ year }}{% endblock %}
+{% block page_title %}DRE — Demonstrativo de Resultado{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('export_sales_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Exportar CSV</a>
+{% endblock %}
+{% block content %}
+
+<div class="d-flex gap-2 mb-4 align-items-center">
+  <a href="?year={{ year-1 }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+  <span class="fw-bold fs-5">{{ year }}</span>
+  <a href="?year={{ year+1 }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+</div>
+
+<!-- Annual totals -->
+<div class="row g-3 mb-4">
+  {% set kpis = [
+    ('Receita Bruta', totals.receita_bruta, 'text-primary', '#eff6ff'),
+    ('CMV (Custo produtos)', totals.cmv, 'text-danger', '#fef2f2'),
+    ('Taxas de Pagamento', totals.taxas, 'text-warning', '#fefce8'),
+    ('Lucro Líquido', totals.lucro_liq, 'text-success', '#f0fdf4'),
+  ] %}
+  {% for label, val, cls, bg in kpis %}
+  <div class="col-6 col-md-3">
+    <div class="card p-3" style="border-left:3px solid">
+      <div class="text-muted small">{{ label }}</div>
+      <div class="fw-bold fs-4 {{ cls }}">R$ {{ '%.2f'|format(val) }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Monthly table -->
+<div class="card">
+  <div class="card-header p-3 fw-semibold">Resultado Mensal — {{ year }}</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Mês</th>
+          <th class="text-end">Vendas</th>
+          <th class="text-end">Receita Bruta</th>
+          <th class="text-end">Descontos</th>
+          <th class="text-end">CMV</th>
+          <th class="text-end">Taxas</th>
+          <th class="text-end">Lucro Bruto</th>
+          <th class="text-end">Lucro Líquido</th>
+          <th class="text-end">Margem</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% set month_names = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'] %}
+      {% for m in months %}
+      <tr class="{{ 'fw-semibold' if m.receita_bruta > 0 }}">
+        <td>{{ month_names[m.month-1] }}/{{ year }}</td>
+        <td class="text-end text-muted">{{ m.qtd_vendas }}</td>
+        <td class="text-end">{% if m.receita_bruta %}R$ {{ '%.2f'|format(m.receita_bruta) }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+        <td class="text-end text-danger small">{% if m.descontos %}- R$ {{ '%.2f'|format(m.descontos) }}{% else %}—{% endif %}</td>
+        <td class="text-end text-danger small">{% if m.cmv %}- R$ {{ '%.2f'|format(m.cmv) }}{% else %}—{% endif %}</td>
+        <td class="text-end text-warning small">{% if m.taxas %}- R$ {{ '%.2f'|format(m.taxas) }}{% else %}—{% endif %}</td>
+        <td class="text-end">{% if m.lucro_bruto %}R$ {{ '%.2f'|format(m.lucro_bruto) }}{% else %}—{% endif %}</td>
+        <td class="text-end {{ 'text-success fw-bold' if m.lucro_liq > 0 else 'text-danger' }}">
+          {% if m.receita_bruta %}R$ {{ '%.2f'|format(m.lucro_liq) }}{% else %}—{% endif %}
+        </td>
+        <td class="text-end">
+          {% if m.receita_bruta %}
+          <span class="badge {{ 'bg-success' if m.margem >= 30 else ('bg-warning text-dark' if m.margem >= 15 else 'bg-danger') }}">
+            {{ '%.1f'|format(m.margem) }}%
+          </span>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+      <tfoot class="table-dark">
+        <tr>
+          <td><strong>TOTAL {{ year }}</strong></td>
+          <td class="text-end">{{ totals.qtd_vendas }}</td>
+          <td class="text-end">R$ {{ '%.2f'|format(totals.receita_bruta) }}</td>
+          <td class="text-end text-danger">- R$ {{ '%.2f'|format(totals.descontos) }}</td>
+          <td class="text-end text-danger">- R$ {{ '%.2f'|format(totals.cmv) }}</td>
+          <td class="text-end" style="color:#fcd34d">- R$ {{ '%.2f'|format(totals.taxas) }}</td>
+          <td class="text-end">R$ {{ '%.2f'|format(totals.lucro_bruto) }}</td>
+          <td class="text-end text-success fw-bold">R$ {{ '%.2f'|format(totals.lucro_liq) }}</td>
+          <td class="text-end"><span class="badge bg-success">{{ '%.1f'|format(totals.margem) }}%</span></td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3 p-3">
+  <div class="small text-muted">
+    <strong>Legenda:</strong>
+    CMV = Custo da Mercadoria Vendida (custo do perfume por ml + materiais de produção) ·
+    Lucro Bruto = Receita − Descontos − CMV ·
+    Lucro Líquido = Lucro Bruto − Taxas de pagamento
+  </div>
+</div>
+{% endblock %}

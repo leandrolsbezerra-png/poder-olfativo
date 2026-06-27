@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Estoque de Decants{% endblock %}
+{% block page_title %}Estoque de Decants{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('fractionation') }}" class="btn btn-primary btn-sm"><i class="bi bi-scissors me-1"></i>Fracionar</a>
+{% endblock %}
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form class="d-flex flex-wrap gap-2" method="get">
+      <input type="text" name="q" class="form-control form-control-sm" style="max-width:220px" placeholder="Perfume ou marca…" value="{{ q }}">
+      <select name="size" class="form-select form-select-sm" style="max-width:130px">
+        <option value="">Todos os ml</option>
+        {% for s in [2,5,10,15,20,30] %}
+        <option value="{{ s }}" {{ 'selected' if size==s|string }}>{{ s }}ml</option>
+        {% endfor %}
+      </select>
+      <div class="form-check d-flex align-items-center gap-1">
+        <input class="form-check-input" type="checkbox" name="oos" value="1" id="chkOos" {{ 'checked' if oos }}>
+        <label class="form-check-label small" for="chkOos">Apenas zerados</label>
+      </div>
+      <button class="btn btn-sm btn-outline-primary">Filtrar</button>
+      {% if q or size or oos %}<a href="{{ url_for('decants_stock') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>{% endif %}
+    </form>
+  </div>
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Marca</th><th>Perfume</th><th>Conc.</th><th>Gênero</th><th>Tamanho</th><th class="text-end">Preço</th><th class="text-end">Estoque</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for d in decants %}
+      <tr class="{{ 'table-warning' if d.stock_quantity == 0 }}">
+        <td class="fw-semibold small">{{ d.brand_name }}</td>
+        <td>
+          <a href="{{ url_for('perfume_detail', id=d.perfume_id) }}" class="text-decoration-none fw-semibold">{{ d.perfume_name }}</a>
+        </td>
+        <td><span class="concentration-badge badge-{{ d.concentration|lower|replace(' ','') }}">{{ d.concentration }}</span></td>
+        <td>
+          <span class="badge badge-{{ 'masc' if d.gender=='Masculino' else ('fem' if d.gender=='Feminino' else 'uni') }}">
+            {{ d.gender[:3] }}
+          </span>
+        </td>
+        <td><span class="ml-badge">{{ d.size_ml|int }}ml</span></td>
+        <td class="text-end">
+          {% if d.sale_price > 0 %}
+          <strong>R$ {{ '%.2f'|format(d.sale_price) }}</strong>
+          {% else %}
+          <span class="text-muted small">Sem preço</span>
+          {% endif %}
+        </td>
+        <td class="text-end">
+          {% if d.stock_quantity == 0 %}
+          <span class="badge bg-danger">Zerado</span>
+          {% else %}
+          <span class="fw-bold text-success">{{ d.stock_quantity }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('perfume_detail', id=d.perfume_id) }}" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-pencil"></i></a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">Nenhum decant encontrado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="text-muted small mt-2">{{ decants|length }} produto(s)</div>
+{% endblock %}

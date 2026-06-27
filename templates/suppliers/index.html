@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Fornecedores{% endblock %}
+{% block page_title %}Fornecedores{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('supplier_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Novo Fornecedor</a>
+{% endblock %}
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form class="d-flex gap-2" method="get">
+      <input type="text" name="q" class="form-control form-control-sm" style="max-width:260px" placeholder="Buscar por nome…" value="{{ search }}">
+      <button class="btn btn-sm btn-outline-primary">Buscar</button>
+      {% if search %}<a href="{{ url_for('suppliers') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>{% endif %}
+    </form>
+  </div>
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead><tr><th>Nome</th><th>Contato</th><th>Telefone / WhatsApp</th><th>E-mail</th><th>CNPJ</th><th></th></tr></thead>
+      <tbody>
+      {% for s in suppliers %}
+      <tr>
+        <td class="fw-semibold">{{ s.name }}</td>
+        <td class="text-muted small">{{ s.contact_name or '—' }}</td>
+        <td class="text-muted small">{{ s.phone or '—' }}</td>
+        <td class="text-muted small">{{ s.email or '—' }}</td>
+        <td class="text-muted small">{{ s.cnpj or '—' }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('supplier_edit', id=s.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+          <form method="post" action="{{ url_for('supplier_delete', id=s.id) }}" class="d-inline" onsubmit="return confirm('Remover fornecedor?')">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">Nenhum fornecedor cadastrado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

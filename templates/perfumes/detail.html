@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% block title %}{{ perfume.brand_name }} {{ perfume.name }}{% endblock %}
+{% block page_title %}{{ perfume.brand_name }} — {{ perfume.name }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('perfume_edit', id=perfume.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+  <a href="{{ url_for('bottle_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Novo Frasco</a>
+{% endblock %}
+{% block content %}
+<div class="row g-3">
+
+  <!-- Perfume info -->
+  <div class="col-md-3">
+    <div class="card mb-3 perfume-card">
+      <div class="card-body">
+        <div class="mb-3">
+          <span class="concentration-badge badge-{{ perfume.concentration|lower|replace(' ','') }} me-1">{{ perfume.concentration }}</span>
+          <span class="badge badge-{{ 'masc' if perfume.gender=='Masculino' else ('fem' if perfume.gender=='Feminino' else 'uni') }}">{{ perfume.gender }}</span>
+          {% if perfume.year %}<span class="text-muted small ms-1">{{ perfume.year }}</span>{% endif %}
+        </div>
+        {% if perfume.family %}
+        <div class="mb-2"><i class="bi bi-flower1 me-1 text-muted"></i><span class="small">{{ perfume.family }}</span></div>
+        {% endif %}
+        {% if perfume.notes_top %}
+        <div class="mb-1">
+          <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">TOPO</div>
+          <div class="small">{{ perfume.notes_top }}</div>
+        </div>
+        {% endif %}
+        {% if perfume.notes_heart %}
+        <div class="mb-1">
+          <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">CORAÇÃO</div>
+          <div class="small">{{ perfume.notes_heart }}</div>
+        </div>
+        {% endif %}
+        {% if perfume.notes_base %}
+        <div class="mb-1">
+          <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">FUNDO</div>
+          <div class="small">{{ perfume.notes_base }}</div>
+        </div>
+        {% endif %}
+        {% if perfume.description %}<hr><p class="small text-muted mb-0">{{ perfume.description }}</p>{% endif %}
+      </div>
+    </div>
+
+    <!-- Foto do frasco -->
+    <div class="card mb-3">
+      <div class="card-header p-3 fw-semibold small">Foto do Frasco (para etiqueta)</div>
+      <div class="card-body text-center p-3">
+        {% if perfume.photo_filename %}
+        <img src="{{ url_for('static', filename='perfume_photos/' + perfume.photo_filename) }}"
+             style="max-height:120px;max-width:100%;border-radius:8px;object-fit:contain" class="mb-2">
+        {% endif %}
+        <form method="post" action="{{ url_for('perfume_upload_photo', id=perfume.id) }}" enctype="multipart/form-data">
+          <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mb-2">
+          <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+            <i class="bi bi-camera me-1"></i>{{ 'Trocar foto' if perfume.photo_filename else 'Adicionar foto' }}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Frascos registrados -->
+    <div class="card">
+      <div class="card-header p-3 d-flex justify-content-between align-items-center">
+        <span class="small fw-semibold">Frascos Comprados</span>
+        <a href="{{ url_for('bottle_new') }}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem">+ Frasco</a>
+      </div>
+      <div class="card-body p-0">
+        {% for bt in bottles %}
+        <div class="p-3 border-bottom">
+          <div class="d-flex justify-content-between">
+            <span class="fw-semibold small">{{ bt.volume_ml|int }}ml</span>
+            <span class="text-muted small">{{ bt.purchase_date }}</span>
+          </div>
+          <div class="text-muted small">Custo: R$ {{ '%.2f'|format(bt.cost_price) }} · R$/ml: {{ '%.3f'|format(bt.cost_price/bt.volume_ml) }}</div>
+          {% if bt.supplier_name %}<div class="text-muted small"><i class="bi bi-truck me-1"></i>{{ bt.supplier_name }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted p-3 small">
+          Nenhum frasco registrado.<br>
+          <a href="{{ url_for('bottle_new') }}" class="btn btn-sm btn-primary mt-2 py-1 px-3" style="font-size:.8rem">Adicionar frasco</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing calculator -->
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header p-3 d-flex justify-content-between align-items-center">
+        <div>
+          <span class="fw-semibold">Preços dos Decants</span>
+          {% if bottles %}
+          <div class="text-muted small">Base: R$ {{ '%.3f'|format(bottles[0].cost_price/bottles[0].volume_ml) }}/ml</div>
+          {% endif %}
+        </div>
+        {% if bottles %}
+        <form method="post" action="{{ url_for('perfume_recalculate', id=perfume.id) }}" class="d-inline">
+          <button type="submit" class="btn btn-sm btn-outline-success py-1">
+            <i class="bi bi-arrow-clockwise me-1"></i>Recalcular tudo
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if not bottles %}
+        <div class="alert alert-warning py-2 small mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          Cadastre um frasco original para calcular os preços automaticamente.
+        </div>
+        {% else %}
+        <div class="alert alert-light border small mb-3 py-2">
+          <strong>Como funciona:</strong> Custo/ml × tamanho + frasquinho × multiplicador = Preço de venda.<br>
+          Clique em <strong>Recalcular tudo</strong> sempre que o custo do fornecedor mudar.
+        </div>
+        <form method="post" action="{{ url_for('perfume_update_prices', id=perfume.id) }}">
+          {% for d in decants %}
+          {% set vial = vials|selectattr('size_ml','eq',d.size_ml)|first %}
+          {% set vial_c = vial.cost if vial else 0 %}
+          {% set mult = vial.multiplier if vial else 3.0 %}
+          {% set cost_per_ml = bottles[0].cost_price / bottles[0].volume_ml %}
+          {% set cost_unit = cost_per_ml * d.size_ml + vial_c %}
+          {% set auto_price = cost_unit * mult %}
+          <div class="mb-3 p-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="ml-badge">{{ d.size_ml|int }}ml</span>
+              <span class="text-muted small">{{ mult }}× custo</span>
+            </div>
+            <!-- cost breakdown -->
+            <div class="row g-1 mb-2" style="font-size:.75rem;color:#888">
+              <div class="col-auto">Custo/ml: R$ {{ '%.4f'|format(cost_per_ml) }}</div>
+              <div class="col-auto text-muted">·</div>
+              <div class="col-auto">Frasquinho: R$ {{ '%.2f'|format(vial_c) }}</div>
+              <div class="col-auto text-muted">·</div>
+              <div class="col-auto fw-semibold" style="color:#555">Custo/un: R$ {{ '%.2f'|format(cost_unit) }}</div>
+            </div>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">R$</span>
+              <input type="number" name="price_{{ d.id }}" class="form-control fw-semibold"
+                     step="0.01" min="0"
+                     value="{{ '%.2f'|format(d.sale_price) if d.sale_price else '%.2f'|format(auto_price) }}"
+                     id="price_{{ d.id }}" oninput="calcMargin({{ d.id }}, {{ cost_unit }}, {{ mult }})">
+              {% if d.sale_price > 0 %}
+              <button type="button" class="btn btn-outline-secondary btn-sm px-2"
+                      onclick="resetPrice({{ d.id }}, {{ auto_price|round(2) }})"
+                      title="Restaurar preço calculado ({{ '%.2f'|format(auto_price) }})">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </button>
+              {% endif %}
+            </div>
+            <div class="small mt-1" id="margin_{{ d.id }}"></div>
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary w-100">Salvar Preços Manualmente</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Multiplicadores de markup -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header p-3">
+        <span class="fw-semibold">Multiplicadores de Markup</span>
+        <div class="text-muted small">Configura os multiplicadores globais por tamanho</div>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('settings') }}">
+          {% for v in vials %}
+          <div class="mb-3 p-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="ml-badge">{{ v.label }}</span>
+              {% if bottles %}
+              {% set cost_per_ml = bottles[0].cost_price / bottles[0].volume_ml %}
+              {% set cost_unit = cost_per_ml * v.size_ml + v.cost %}
+              <span class="text-muted small">Custo/un: R$ {{ '%.2f'|format(cost_unit) }}</span>
+              {% endif %}
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label" style="font-size:.7rem;color:#888;margin-bottom:2px">MULTIPLICADOR</label>
+                <input type="number" name="mult_{{ v.size_ml }}" class="form-control form-control-sm fw-bold"
+                       step="0.1" min="1" value="{{ v.multiplier }}"
+                       {% if bottles %}
+                       oninput="previewPrice({{ v.size_ml }}, {{ (bottles[0].cost_price / bottles[0].volume_ml * v.size_ml + v.cost)|round(4) }})"
+                       {% endif %}
+                       >
+              </div>
+              <div class="col-6">
+                <label class="form-label" style="font-size:.7rem;color:#888;margin-bottom:2px">FRASQUINHO (R$)</label>
+                <input type="number" name="vial_{{ v.size_ml }}" class="form-control form-control-sm"
+                       step="0.01" min="0" value="{{ '%.2f'|format(v.cost) }}">
+              </div>
+            </div>
+            {% if bottles %}
+            {% set cost_per_ml = bottles[0].cost_price / bottles[0].volume_ml %}
+            {% set cost_unit = cost_per_ml * v.size_ml + v.cost %}
+            <div class="mt-1 small" id="prev_{{ v.size_ml }}">
+              → Preço: <strong>R$ {{ '%.2f'|format(cost_unit * v.multiplier) }}</strong>
+              <span class="text-muted">(margem {{ ((cost_unit * v.multiplier - cost_unit) / (cost_unit * v.multiplier) * 100)|round(0)|int }}%)</span>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-success w-100">
+            <i class="bi bi-save me-1"></i>Salvar Multiplicadores
+          </button>
+          <div class="text-muted small mt-2 text-center">
+            Após salvar, clique em <strong>Recalcular tudo</strong> para atualizar os preços deste perfume.
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calcMargin(id, cost, mult) {
+  const price = parseFloat(document.getElementById('price_'+id).value) || 0;
+  const el = document.getElementById('margin_'+id);
+  if (!el) return;
+  if (price > 0 && cost > 0) {
+    const margin = ((price-cost)/price*100).toFixed(0);
+    const markup_x = (price/cost).toFixed(2);
+    const autoPrice = (cost * mult).toFixed(2);
+    const diff = price - cost * mult;
+    const diffStr = diff >= 0 ? `+R$ ${diff.toFixed(2)}` : `−R$ ${Math.abs(diff).toFixed(2)}`;
+    el.innerHTML = `<span class="${price>=cost?'text-success':'text-danger'}">Margem: ${margin}% · ${markup_x}x</span>`
+      + (Math.abs(diff) > 0.01 ? ` <span class="text-muted">(calculado: R$ ${autoPrice}, ${diffStr})</span>` : '');
+  } else { el.textContent = ''; }
+}
+
+function resetPrice(id, autoPrice) {
+  document.getElementById('price_'+id).value = autoPrice.toFixed(2);
+  calcMargin(id, 0, 0); // trigger display update
+}
+
+{% if bottles %}
+const costPerMl = {{ bottles[0].cost_price / bottles[0].volume_ml }};
+
+function previewPrice(size, costUnit) {
+  const mult = parseFloat(document.querySelector(`[name="mult_${size}"]`).value) || 0;
+  const el = document.getElementById(`prev_${size}`);
+  if (!el || !mult) return;
+  const price = costUnit * mult;
+  const margin = ((price - costUnit) / price * 100).toFixed(0);
+  el.innerHTML = `→ Preço: <strong>R$ ${price.toFixed(2)}</strong> <span class="text-muted">(margem ${margin}%)</span>`;
+}
+
+// Init margin display on load
+{% for d in decants %}
+{% set vial = vials|selectattr('size_ml','eq',d.size_ml)|first %}
+{% set vial_c = vial.cost if vial else 0 %}
+{% set mult = vial.multiplier if vial else 3.0 %}
+{% set cost_unit = (bottles[0].cost_price / bottles[0].volume_ml) * d.size_ml + vial_c %}
+calcMargin({{ d.id }}, {{ cost_unit|round(4) }}, {{ mult }});
+{% endfor %}
+{% endif %}
+</script>
+{% endblock %}

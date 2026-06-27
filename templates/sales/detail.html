@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Venda #{{ sale.id }}{% endblock %}
+{% block page_title %}Venda #{{ sale.id }}{% endblock %}
+{% block topbar_actions %}
+  {% if sale.status != 'cancelada' %}
+  <form method="post" action="{{ url_for('sale_cancel', id=sale.id) }}" onsubmit="return confirm('Cancelar esta venda e restaurar o estoque?')">
+    <button class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle me-1"></i>Cancelar</button>
+  </form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header p-3">Resumo</div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Data</dt><dd class="col-7">{{ sale.sale_date[:16] }}</dd>
+          <dt class="col-5 text-muted">Cliente</dt><dd class="col-7">{{ sale.customer_name }}</dd>
+          <dt class="col-5 text-muted">Pagamento</dt><dd class="col-7">{{ sale.payment_method }}</dd>
+          <dt class="col-5 text-muted">Status</dt>
+          <dd class="col-7">
+            <span class="badge {{ 'bg-danger' if sale.status=='cancelada' else 'bg-success' }}">
+              {{ 'Cancelada' if sale.status=='cancelada' else 'Concluída' }}
+            </span>
+          </dd>
+        </dl>
+        <hr>
+        <div class="d-flex justify-content-between mb-1 small">
+          <span class="text-muted">Subtotal</span><span>R$ {{ '%.2f'|format(sale.subtotal) }}</span>
+        </div>
+        {% if sale.discount %}
+        <div class="d-flex justify-content-between mb-1 small">
+          <span class="text-muted">Desconto</span><span class="text-danger">— R$ {{ '%.2f'|format(sale.discount) }}</span>
+        </div>
+        {% endif %}
+        {% if sale.payment_fee_pct %}
+        <div class="d-flex justify-content-between mb-1 small">
+          <span class="text-muted">Taxa {{ sale.payment_method }} ({{ sale.payment_fee_pct }}%)</span>
+          <span class="text-danger">— R$ {{ '%.2f'|format(sale.payment_fee_amount) }}</span>
+        </div>
+        {% endif %}
+        <div class="d-flex justify-content-between mt-2">
+          <span class="fw-bold">Total</span>
+          <strong style="color:#c9a96e;font-size:1.1rem">R$ {{ '%.2f'|format(sale.total) }}</strong>
+        </div>
+        {% if sale.payment_fee_pct %}
+        <div class="d-flex justify-content-between mt-1 small">
+          <span class="text-muted">Você recebeu líquido</span>
+          <strong class="text-success">R$ {{ '%.2f'|format(sale.total - sale.payment_fee_amount) }}</strong>
+        </div>
+        {% endif %}
+        {% if sale.notes %}<hr><p class="small text-muted mb-0">{{ sale.notes }}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header p-3">Itens ({{ items|length }})</div>
+      <div class="card-body p-0">
+        <table class="table mb-0">
+          <thead><tr><th>Produto</th><th>Tamanho</th><th class="text-center">Qtd</th><th class="text-end">Preço</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+          {% for i in items %}
+          <tr>
+            <td class="fw-semibold small">{{ i.product_label }}</td>
+            <td><span class="ml-badge">{{ i.size_ml|int if i.size_ml else '—' }}ml</span></td>
+            <td class="text-center">{{ i.quantity }}</td>
+            <td class="text-end">R$ {{ '%.2f'|format(i.unit_price) }}</td>
+            <td class="text-end fw-semibold">R$ {{ '%.2f'|format(i.total) }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

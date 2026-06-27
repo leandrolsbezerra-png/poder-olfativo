@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}Relatórios{% endblock %}
+{% block page_title %}Relatórios{% endblock %}
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-muted small fw-semibold me-1">Período:</span>
+      {% for d, label in [('7','7 dias'),('30','30 dias'),('60','60 dias'),('90','90 dias'),('365','1 ano')] %}
+      <a href="?period={{ d }}" class="btn btn-sm {{ 'btn-primary' if period==d else 'btn-outline-secondary' }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card p-3 text-center">
+      <div class="text-muted small mb-1">Faturamento</div>
+      <div class="fw-bold fs-4" style="color:#c9a96e">R$ {{ '%.2f'|format(total_revenue) }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3 text-center">
+      <div class="text-muted small mb-1">Vendas</div>
+      <div class="fw-bold fs-4">{{ total_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3 text-center">
+      <div class="text-muted small mb-1">Ticket Médio</div>
+      <div class="fw-bold fs-4">R$ {{ '%.2f'|format(avg_ticket) }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3 text-center">
+      <div class="text-muted small mb-1">Valor em Frascos</div>
+      <div class="fw-bold fs-4">R$ {{ '%.2f'|format(stock_value) }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <!-- Revenue chart -->
+  <div class="col-md-8">
+    <div class="card h-100">
+      <div class="card-header p-3">Faturamento Diário</div>
+      <div class="card-body"><canvas id="salesChart" height="100"></canvas></div>
+    </div>
+  </div>
+  <!-- By size -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-header p-3">Decants por Tamanho</div>
+      <div class="card-body">
+        {% if by_size %}
+        <canvas id="sizeChart" height="160"></canvas>
+        <table class="table table-sm mt-3 mb-0">
+          <tbody>
+          {% for s in by_size %}
+          <tr>
+            <td><span class="ml-badge">{{ s.size_ml|int }}ml</span></td>
+            <td class="text-muted">{{ s.qty|int }} un</td>
+            <td class="text-end fw-semibold">R$ {{ '%.2f'|format(s.revenue) }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-muted py-4">Sem dados no período</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <!-- Top decants -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header p-3">Top Decants por Faturamento</div>
+      <div class="card-body p-0">
+        <table class="table mb-0">
+          <thead><tr><th>Marca / Perfume</th><th>Tam.</th><th class="text-end">Qtd</th><th class="text-end">Faturamento</th></tr></thead>
+          <tbody>
+          {% for d in top_decants %}
+          <tr>
+            <td><span class="fw-semibold small">{{ d.brand }}</span><span class="text-muted small d-block">{{ d.perfume }}</span></td>
+            <td><span class="ml-badge">{{ d.size_ml|int }}ml</span></td>
+            <td class="text-end">{{ d.qty|int }}</td>
+            <td class="text-end fw-semibold">R$ {{ '%.2f'|format(d.revenue) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">Sem vendas no período.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Top brands + payment -->
+  <div class="col-md-5">
+    <div class="card mb-3">
+      <div class="card-header p-3">Top Marcas</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <tbody>
+          {% for b in top_brands %}
+          <tr>
+            <td class="fw-semibold">{{ b.brand }}</td>
+            <td class="text-muted small">{{ b.qty|int }} un</td>
+            <td class="text-end">R$ {{ '%.2f'|format(b.revenue) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-3">Sem dados</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header p-3">Formas de Pagamento</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <tbody>
+          {% for p in payment_methods %}
+          <tr>
+            <td>{{ p.payment_method }}</td>
+            <td class="text-muted small">{{ p.count }}x</td>
+            <td class="text-end fw-semibold">R$ {{ '%.2f'|format(p.total) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-3">Sem dados</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const salesData = {{ sales_data|tojson }};
+new Chart(document.getElementById('salesChart'), {
+  type:'line',
+  data:{
+    labels: salesData.map(d => d.day.slice(5)),
+    datasets:[{ label:'Faturamento', data:salesData.map(d=>d.total),
+      borderColor:'#c9a96e', backgroundColor:'rgba(201,169,110,.15)',
+      fill:true, tension:.3, pointRadius:3 }]
+  },
+  options:{ responsive:true, plugins:{legend:{display:false}},
+    scales:{ y:{ticks:{callback:v=>'R$ '+v.toLocaleString('pt-BR')}} } }
+});
+
+{% if by_size %}
+const sizes = {{ by_size|map(attribute='size_ml')|list|tojson }};
+const sizeQtys = {{ by_size|map(attribute='qty')|list|tojson }};
+new Chart(document.getElementById('sizeChart'), {
+  type:'doughnut',
+  data:{ labels:sizes.map(s=>s+'ml'), datasets:[{ data:sizeQtys,
+    backgroundColor:['#1a1a2e','#c9a96e','#94a3b8','#64748b','#e2d5b8','#2d2d4e'] }] },
+  options:{ plugins:{ legend:{ position:'bottom', labels:{font:{size:11}} } } }
+});
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if customer else 'Novo' }} Cliente{% endblock %}
+{% block page_title %}{{ 'Editar' if customer else 'Novo' }} Cliente{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" id="clientForm">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Nome completo *</label>
+              <input type="text" name="name" class="form-control" value="{{ customer.name if customer else '' }}" required autofocus>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Telefone / WhatsApp</label>
+              <input type="text" name="phone" class="form-control" value="{{ customer.phone if customer else '' }}" placeholder="(11) 99999-9999">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">E-mail</label>
+              <input type="email" name="email" class="form-control" value="{{ customer.email if customer else '' }}">
+            </div>
+
+            <div class="col-12"><hr class="my-1"><div class="fw-semibold small text-muted">ENDEREÇO</div></div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">CEP</label>
+              <div class="input-group">
+                <input type="text" name="cep" id="cepInput" class="form-control" value="{{ customer.cep if customer else '' }}"
+                       placeholder="00000-000" maxlength="9" oninput="formatCep(this)">
+                <button type="button" class="btn btn-outline-secondary" onclick="buscarCep()" title="Buscar endereço">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <div id="cepStatus" class="small mt-1"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Logradouro</label>
+              <input type="text" name="street" id="street" class="form-control" value="{{ customer.street if customer else '' }}" placeholder="Rua, Av., etc.">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Número</label>
+              <input type="text" name="number" class="form-control" value="{{ customer.number if customer else '' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Complemento</label>
+              <input type="text" name="complement" class="form-control" value="{{ customer.complement if customer else '' }}" placeholder="Apto, Bloco…">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Bairro</label>
+              <input type="text" name="neighborhood" id="neighborhood" class="form-control" value="{{ customer.neighborhood if customer else '' }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Cidade</label>
+              <input type="text" name="city" id="city" class="form-control" value="{{ customer.city if customer else '' }}">
+            </div>
+            <div class="col-md-1">
+              <label class="form-label fw-semibold">UF</label>
+              <input type="text" name="state" id="state" class="form-control" value="{{ customer.state if customer else '' }}" maxlength="2" style="text-transform:uppercase">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Observações</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Preferências, informações extras…">{{ customer.notes if customer else '' }}</textarea>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">Salvar Cliente</button>
+            <a href="{{ url_for('customers') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function formatCep(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5,8);
+  el.value = v;
+}
+
+async function buscarCep() {
+  const cep = document.getElementById('cepInput').value.replace(/\D/g,'');
+  const status = document.getElementById('cepStatus');
+  if (cep.length !== 8) { status.innerHTML = '<span class="text-danger">CEP deve ter 8 dígitos.</span>'; return; }
+  status.innerHTML = '<span class="text-muted">Buscando…</span>';
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await res.json();
+    if (data.erro) { status.innerHTML = '<span class="text-danger">CEP não encontrado.</span>'; return; }
+    document.getElementById('street').value = data.logradouro || '';
+    document.getElementById('neighborhood').value = data.bairro || '';
+    document.getElementById('city').value = data.localidade || '';
+    document.getElementById('state').value = data.uf || '';
+    status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Endereço encontrado!</span>';
+    // Focus on number field
+    document.querySelector('[name="number"]').focus();
+  } catch(e) {
+    status.innerHTML = '<span class="text-danger">Erro ao buscar CEP. Verifique sua conexão.</span>';
+  }
+}
+
+// Auto-search when CEP is complete
+document.getElementById('cepInput').addEventListener('input', function() {
+  if (this.value.replace(/\D/g,'').length === 8) buscarCep();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Movimentações de Estoque{% endblock %}
+{% block page_title %}Movimentações de Estoque{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('stock_entry') }}" class="btn btn-success btn-sm"><i class="bi bi-plus me-1"></i>Entrada</a>
+  <a href="{{ url_for('stock_exit') }}" class="btn btn-danger btn-sm"><i class="bi bi-dash me-1"></i>Saída</a>
+{% endblock %}
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form class="d-flex flex-wrap gap-2" method="get">
+      <select name="product_id" class="form-select form-select-sm" style="max-width:220px">
+        <option value="">Todos os produtos</option>
+        {% for p in products %}
+        <option value="{{ p.id }}" {{ 'selected' if product_id==p.id|string }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="type" class="form-select form-select-sm" style="max-width:160px">
+        <option value="">Todos os tipos</option>
+        <option value="entrada" {{ 'selected' if mv_type=='entrada' }}>Entradas</option>
+        <option value="saida" {{ 'selected' if mv_type=='saida' }}>Saídas</option>
+        <option value="ajuste" {{ 'selected' if mv_type=='ajuste' }}>Ajustes</option>
+      </select>
+      <button class="btn btn-sm btn-outline-primary">Filtrar</button>
+      {% if product_id or mv_type %}<a href="{{ url_for('stock_movements') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>{% endif %}
+    </form>
+  </div>
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Quantidade</th><th>Custo Unit.</th><th>Motivo</th><th>Observação</th></tr></thead>
+      <tbody>
+      {% for m in movements %}
+      <tr>
+        <td class="text-muted small">{{ m.created_at[:16] }}</td>
+        <td class="fw-semibold">{{ m.product_name }}</td>
+        <td>
+          <span class="badge badge-{{ m.type }}">
+            {{ 'Entrada' if m.type=='entrada' else ('Saída' if m.type=='saida' else 'Ajuste') }}
+          </span>
+        </td>
+        <td>{{ m.quantity|int }} {{ m.unit }}</td>
+        <td>{% if m.unit_cost %}R$ {{ '%.2f'|format(m.unit_cost) }}{% else %}—{% endif %}</td>
+        <td class="text-muted small">{{ m.reason or '—' }}</td>
+        <td class="text-muted small">{{ m.notes or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="text-muted small mt-2">{{ movements|length }} registro(s) — exibindo os 200 mais recentes</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Materiais{% endblock %}
+{% block page_title %}Materiais e Insumos{% endblock %}
+{% block content %}
+<div class="alert alert-light border small mb-4 py-2">
+  <i class="bi bi-info-circle me-1"></i>
+  Os custos dos materiais são usados automaticamente no cálculo do preço dos decants.
+  Atualize sempre que o preço do fornecedor mudar e clique em <strong>Salvar</strong>.
+</div>
+
+<form method="post" action="{{ url_for('materials_save') }}">
+<div class="card mb-4">
+  <div class="card-header p-3 fw-semibold">Custos e Estoque dos Materiais</div>
+  <div class="card-body p-0">
+    <table class="table mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Usado nos decants</th>
+          <th style="width:150px">Custo unitário (R$)</th>
+          <th style="width:130px">Estoque atual</th>
+          <th style="width:130px">Estoque mínimo</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for m in materials %}
+      <tr class="{{ 'table-warning' if m.stock_quantity <= m.min_stock and m.min_stock > 0 }}">
+        <td>
+          <span class="fw-semibold">{{ m.name }}</span>
+          {% if m.stock_quantity <= m.min_stock and m.min_stock > 0 %}
+          <span class="badge bg-warning text-dark ms-1">Estoque baixo</span>
+          {% endif %}
+        </td>
+        <td class="text-muted small">
+          {% if m.sizes %}
+            {% for s in m.sizes.split(',') %}
+            <span class="ml-badge me-1">{{ s|int }}ml</span>
+            {% endfor %}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text">R$</span>
+            <input type="number" name="cost_{{ m.id }}" class="form-control"
+                   step="0.0001" min="0" value="{{ '%.4f'|format(m.cost_per_unit) }}">
+          </div>
+        </td>
+        <td>
+          <input type="number" name="stock_{{ m.id }}" class="form-control form-control-sm"
+                 step="1" min="0" value="{{ m.stock_quantity|int }}">
+        </td>
+        <td>
+          <input type="number" name="min_{{ m.id }}" class="form-control form-control-sm"
+                 step="1" min="0" value="{{ m.min_stock|int }}">
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer">
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-save me-1"></i>Salvar Materiais
+    </button>
+  </div>
+</div>
+</form>
+
+<!-- Cost preview per size -->
+<div class="card">
+  <div class="card-header p-3 fw-semibold">Custo Total de Embalagem por Tamanho</div>
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead><tr><th>Tamanho</th><th>Materiais incluídos</th><th class="text-end">Custo total embalagem</th></tr></thead>
+      <tbody>
+      {% for size_ml, cost in size_costs.items()|sort %}
+      <tr>
+        <td><span class="ml-badge">{{ size_ml|int }}ml</span></td>
+        <td class="text-muted small">
+          {% if size_ml in [2.0, 5.0] %}Frasco 8ml + Tampa + Borrifador
+          {% elif size_ml in [10.0, 15.0] %}Frasco 15ml + Tampa + Borrifador
+          {% else %}Tampa + Borrifador{% endif %}
+        </td>
+        <td class="text-end fw-semibold">R$ {{ '%.4f'|format(cost) }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Quick stock entry -->
+<div class="card mt-4">
+  <div class="card-header p-3 fw-semibold"><i class="bi bi-box-arrow-in-down me-1"></i>Registrar Entrada de Material</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('material_entry') }}" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">Material</label>
+        <select name="material_id" class="form-select" required>
+          {% for m in materials %}
+          <option value="{{ m.id }}">{{ m.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">Quantidade</label>
+        <input type="number" name="quantity" class="form-control" step="1" min="1" placeholder="0" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Custo unitário (R$) — opcional</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">R$</span>
+          <input type="number" name="cost_per_unit" class="form-control" step="0.0001" min="0" placeholder="Atualiza se preenchido">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-success w-100">
+          <i class="bi bi-plus-lg me-1"></i>Registrar Entrada
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

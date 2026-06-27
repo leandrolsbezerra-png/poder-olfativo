@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Ajuste de Estoque{% endblock %}
+{% block page_title %}Ajuste de Estoque{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-warning">
+      <div class="card-header p-3 text-warning fw-semibold"><i class="bi bi-pencil-square me-1"></i>Ajuste de Inventário</div>
+      <div class="card-body">
+        <div class="alert alert-info small py-2 mb-3">Use para corrigir o estoque após inventário físico.</div>
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Produto *</label>
+            <select name="product_id" class="form-select" required id="prodSel" onchange="updateStock()">
+              <option value="">— Selecione —</option>
+              {% for p in products %}
+              <option value="{{ p.id }}" data-stock="{{ p.stock_quantity }}" data-unit="{{ p.unit }}">{{ p.name }} ({{ p.stock_quantity|int }} {{ p.unit }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Quantidade Real em Estoque *</label>
+            <input type="number" name="new_quantity" class="form-control" step="0.01" min="0" required id="newQty" oninput="updatePreview()">
+            <small class="text-muted" id="stockInfo"></small>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Motivo do Ajuste</label>
+            <input type="text" name="reason" class="form-control" value="Inventário físico">
+          </div>
+          <div id="preview" class="alert d-none py-2 small mb-3"></div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-warning px-4">Confirmar Ajuste</button>
+            <a href="{{ url_for('stock_movements') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function updateStock() {
+  const sel = document.getElementById('prodSel');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('stockInfo').textContent = opt.value ? `Estoque atual: ${opt.dataset.stock} ${opt.dataset.unit}` : '';
+  updatePreview();
+}
+function updatePreview() {
+  const sel = document.getElementById('prodSel');
+  const opt = sel.options[sel.selectedIndex];
+  const newQty = parseFloat(document.getElementById('newQty').value);
+  const el = document.getElementById('preview');
+  if (opt.value && !isNaN(newQty)) {
+    const cur = parseFloat(opt.dataset.stock);
+    const diff = newQty - cur;
+    const sign = diff > 0 ? '+' : '';
+    el.className = `alert py-2 small mb-3 ${diff < 0 ? 'alert-warning' : 'alert-success'}`;
+    el.textContent = `Diferença: ${sign}${diff.toFixed(0)} ${opt.dataset.unit}  →  Novo estoque: ${newQty.toFixed(0)} ${opt.dataset.unit}`;
+    el.classList.remove('d-none');
+  } else { el.classList.add('d-none'); }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-2" style="background:#f0ebe4"><i class="bi bi-droplet fs-4" style="color:#c9a96e"></i></div>
+        <div><div class="text-muted small">Perfumes</div><div class="fw-bold fs-4">{{ total_perfumes }}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-2" style="background:#e0f2fe"><i class="bi bi-prescription2 fs-4 text-primary"></i></div>
+        <div><div class="text-muted small">Frascos com ml</div><div class="fw-bold fs-4">{{ total_bottles }}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-2" style="background:#dcfce7"><i class="bi bi-boxes fs-4 text-success"></i></div>
+        <div><div class="text-muted small">Decants em estoque</div><div class="fw-bold fs-4">{{ total_decants_stk }}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-3 p-2" style="background:#fef3c7"><i class="bi bi-receipt fs-4 text-warning"></i></div>
+        <div>
+          <div class="text-muted small">Vendas do Mês</div>
+          <div class="fw-bold fs-4">{{ sales_month.c }}</div>
+          <div class="text-muted small">R$ {{ '%.2f'|format(sales_month.s) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4 p-3">
+  <div class="d-flex flex-wrap gap-4 align-items-center">
+    <div>
+      <span class="text-muted small d-block">Faturamento Bruto</span>
+      <strong class="fs-5" style="color:#c9a96e">R$ {{ '%.2f'|format(sales_month.s) }}</strong>
+    </div>
+    <div class="vr"></div>
+    <div>
+      <span class="text-muted small d-block">Faturamento Líquido</span>
+      <strong class="fs-5 text-success">R$ {{ '%.2f'|format(net_month_value) }}</strong>
+      <div style="font-size:.7rem;color:#888">− R$ {{ '%.2f'|format(net_month.cogs) }} custo{% if net_month.fees %} − R$ {{ '%.2f'|format(net_month.fees) }} taxas{% endif %}</div>
+    </div>
+    <div class="vr"></div>
+    <div><span class="text-muted small d-block">Ticket Médio</span><strong class="fs-5">R$ {{ '%.2f'|format(sales_month.s / sales_month.c) if sales_month.c else '0,00' }}</strong></div>
+    <div class="vr"></div>
+    <div><span class="text-muted small d-block">Valor em Frascos</span><strong class="fs-5">R$ {{ '%.2f'|format(stock_value) }}</strong></div>
+    <div class="ms-auto d-flex gap-2">
+      <a href="{{ url_for('fractionation') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-scissors me-1"></i>Fracionamento</a>
+      <a href="{{ url_for('sale_new') }}" class="btn btn-sm btn-primary"><i class="bi bi-cart-plus me-1"></i>Nova Venda</a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="card h-100">
+      <div class="card-header p-3">Faturamento — Últimos 6 Meses</div>
+      <div class="card-body"><canvas id="salesChart" height="90"></canvas></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-header p-3">Top Decants (30 dias)</div>
+      <div class="card-body p-0">
+        {% if top_decants %}
+        <table class="table table-sm mb-0">
+          <tbody>
+          {% for d in top_decants %}
+          <tr>
+            <td>
+              <span class="small fw-semibold">{{ d.brand }}</span>
+              <span class="small text-muted d-block">{{ d.perfume }}</span>
+            </td>
+            <td><span class="ml-badge">{{ d.size_ml|int }}ml</span></td>
+            <td class="text-end small">{{ d.qty|int }}un</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-muted p-4">Sem vendas nos últimos 30 dias</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Meta do mês -->
+{% if current_goal and current_goal.revenue_goal > 0 %}
+{% set pct = [[sales_month.s / current_goal.revenue_goal * 100, 0]|max, 100]|min %}
+<div class="card mb-3 p-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="fw-semibold"><i class="bi bi-trophy me-1" style="color:#c9a96e"></i>Meta do Mês</span>
+    <span class="small text-muted">R$ {{ '%.2f'|format(sales_month.s) }} / R$ {{ '%.2f'|format(current_goal.revenue_goal) }}</span>
+  </div>
+  <div class="progress" style="height:10px;border-radius:99px">
+    <div class="progress-bar" style="width:{{ pct }}%;background:{% if pct>=100 %}#22c55e{% elif pct>=70 %}#c9a96e{% else %}#ef4444{% endif %};border-radius:99px;transition:width .5s"></div>
+  </div>
+  <div class="d-flex justify-content-between mt-1">
+    <span class="small text-muted">{{ '%.0f'|format(pct) }}% atingido</span>
+    {% if pct >= 100 %}<span class="small text-success fw-bold">🎉 Meta batida!</span>
+    {% else %}<span class="small text-muted">Faltam R$ {{ '%.2f'|format(current_goal.revenue_goal - sales_month.s) }}</span>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mt-0">
+  {% if out_of_stock %}
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header p-3 text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Decants Zerados</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <tbody>
+          {% for d in out_of_stock %}
+          <tr>
+            <td class="fw-semibold">{{ d.brand }} {{ d.perfume }}</td>
+            <td><span class="ml-badge">{{ d.size_ml|int }}ml</span></td>
+            <td><a href="{{ url_for('fractionation') }}" class="btn btn-xs btn-outline-success btn-sm py-0 px-2 small">Fracionar</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="{{ 'col-md-6' if out_of_stock else 'col-12' }}">
+    <div class="card">
+      <div class="card-header p-3">Últimas Vendas</div>
+      <div class="card-body p-0">
+        {% if recent_sales %}
+        <table class="table table-sm mb-0">
+          <thead><tr><th>#</th><th>Cliente</th><th>Pagamento</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+          {% for s in recent_sales %}
+          <tr>
+            <td><a href="{{ url_for('sale_detail', id=s.id) }}" class="text-decoration-none">#{{ s.id }}</a></td>
+            <td>{{ s.customer_name }}</td>
+            <td><span class="badge bg-light text-dark">{{ s.payment_method }}</span></td>
+            <td class="text-end fw-semibold">R$ {{ '%.2f'|format(s.total) }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-muted p-4">Nenhuma venda registrada ainda</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const data = {{ monthly_sales|tojson }};
+const labels = data.map(d => {
+  const [y,m] = d.month.split('-');
+  return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1]+'/'+y.slice(2);
+});
+new Chart(document.getElementById('salesChart'), {
+  type:'bar',
+  data:{ labels, datasets:[{ label:'Faturamento (R$)', data:data.map(d=>d.total), backgroundColor:'#c9a96e', borderRadius:6 }] },
+  options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ y:{ticks:{callback:v=>'R$ '+v.toLocaleString('pt-BR')}} } }
+});
+</script>
+{% endblock %}

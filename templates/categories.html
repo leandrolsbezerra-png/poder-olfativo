@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Categorias{% endblock %}
+{% block page_title %}Categorias{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('category_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Nova Categoria</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead><tr><th>Nome</th><th>Descrição</th><th>Produtos</th><th></th></tr></thead>
+      <tbody>
+      {% for c in categories %}
+      <tr>
+        <td class="fw-semibold">{{ c.name }}</td>
+        <td class="text-muted">{{ c.description or '—' }}</td>
+        <td>{{ c.total }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('category_edit', id=c.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+          <form method="post" action="{{ url_for('category_delete', id=c.id) }}" class="d-inline" onsubmit="return confirm('Excluir categoria?')">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="text-center text-muted py-4">Nenhuma categoria cadastrada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

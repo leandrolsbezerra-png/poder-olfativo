@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if product else 'Novo' }} Produto{% endblock %}
+{% block page_title %}{{ 'Editar' if product else 'Novo' }} Produto{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" id="productForm">
+          <div class="row g-3">
+            <!-- Basic info -->
+            <div class="col-12">
+              <label class="form-label fw-semibold">Nome do Produto *</label>
+              <input type="text" name="name" class="form-control" value="{{ product.name if product else '' }}" required autofocus>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Categoria</label>
+              <select name="category_id" class="form-select">
+                <option value="">— Sem categoria —</option>
+                {% for c in categories %}
+                <option value="{{ c.id }}" {{ 'selected' if product and product.category_id==c.id }}>{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Fornecedor</label>
+              <select name="supplier_id" class="form-select">
+                <option value="">— Sem fornecedor —</option>
+                {% for s in suppliers %}
+                <option value="{{ s.id }}" {{ 'selected' if product and product.supplier_id==s.id }}>{{ s.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Unidade</label>
+              <select name="unit" class="form-select">
+                {% for u in ['un','kg','g','l','ml','m','cm','cx','pc','par','h'] %}
+                <option value="{{ u }}" {{ 'selected' if product and product.unit==u }}>{{ u }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Código de Barras / SKU</label>
+              <input type="text" name="barcode" class="form-control" value="{{ product.barcode if product else '' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descrição</label>
+              <textarea name="description" class="form-control" rows="2">{{ product.description if product else '' }}</textarea>
+            </div>
+
+            <!-- Pricing calculator -->
+            <div class="col-12 mt-2">
+              <div class="card bg-light border-0">
+                <div class="card-body">
+                  <h6 class="fw-bold mb-3"><i class="bi bi-calculator me-1"></i>Calculadora de Preço e Margem</h6>
+                  <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                      <label class="form-label small fw-semibold">Preço de Custo (R$) *</label>
+                      <input type="number" id="costPrice" name="cost_price" class="form-control" step="0.01" min="0"
+                             value="{{ '%.2f'|format(product.cost_price) if product else '0.00' }}" oninput="calcPrice()">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-semibold">Markup (%)</label>
+                      <input type="number" id="markupPct" class="form-control" step="0.1" min="0"
+                             value="{{ '%.1f'|format(product.markup_percent) if product else '0.0' }}" oninput="calcFromMarkup()">
+                      <small class="text-muted">Sobre o custo</small>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-semibold">Margem (%)</label>
+                      <input type="number" id="marginPct" class="form-control" step="0.1" min="0" max="99.9"
+                             value="{{ '%.1f'|format(product.margin_percent) if product else '0.0' }}" oninput="calcFromMargin()">
+                      <small class="text-muted">Sobre a venda</small>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-semibold">Preço de Venda (R$) *</label>
+                      <input type="number" id="salePrice" name="sale_price" class="form-control" step="0.01" min="0"
+                             value="{{ '%.2f'|format(product.sale_price) if product else '0.00' }}" oninput="calcFromSale()">
+                    </div>
+                  </div>
+                  <div id="priceInfo" class="mt-2 small text-muted"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stock -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Estoque Mínimo</label>
+              <input type="number" name="min_stock" class="form-control" step="0.1" min="0"
+                     value="{{ product.min_stock if product else '0' }}">
+              <small class="text-muted">Alerta quando atingir esse valor</small>
+            </div>
+            {% if not product %}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Estoque Inicial</label>
+              <input type="number" name="initial_stock" class="form-control" step="0.1" min="0" value="0">
+              <small class="text-muted">Quantidade em estoque agora</small>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">Salvar Produto</button>
+            <a href="{{ url_for('products') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calcPrice() {
+  const cost = parseFloat(document.getElementById('costPrice').value) || 0;
+  const markup = parseFloat(document.getElementById('markupPct').value) || 0;
+  const sale = cost * (1 + markup / 100);
+  document.getElementById('salePrice').value = sale.toFixed(2);
+  updateMargin();
+}
+function calcFromMarkup() {
+  calcPrice();
+}
+function calcFromMargin() {
+  const cost = parseFloat(document.getElementById('costPrice').value) || 0;
+  const margin = parseFloat(document.getElementById('marginPct').value) || 0;
+  if (margin >= 100) return;
+  const sale = cost / (1 - margin / 100);
+  document.getElementById('salePrice').value = sale.toFixed(2);
+  const markup = cost > 0 ? ((sale - cost) / cost * 100) : 0;
+  document.getElementById('markupPct').value = markup.toFixed(1);
+  updateInfo(cost, sale);
+}
+function calcFromSale() {
+  const cost = parseFloat(document.getElementById('costPrice').value) || 0;
+  const sale = parseFloat(document.getElementById('salePrice').value) || 0;
+  const markup = cost > 0 ? ((sale - cost) / cost * 100) : 0;
+  const margin = sale > 0 ? ((sale - cost) / sale * 100) : 0;
+  document.getElementById('markupPct').value = markup.toFixed(1);
+  document.getElementById('marginPct').value = margin.toFixed(1);
+  updateInfo(cost, sale);
+}
+function updateMargin() {
+  const cost = parseFloat(document.getElementById('costPrice').value) || 0;
+  const sale = parseFloat(document.getElementById('salePrice').value) || 0;
+  const margin = sale > 0 ? ((sale - cost) / sale * 100) : 0;
+  document.getElementById('marginPct').value = margin.toFixed(1);
+  updateInfo(cost, sale);
+}
+function updateInfo(cost, sale) {
+  const profit = sale - cost;
+  const el = document.getElementById('priceInfo');
+  if (cost > 0 && sale > 0) {
+    el.innerHTML = `Lucro bruto por unidade: <strong class="${profit>=0?'text-success':'text-danger'}">R$ ${profit.toFixed(2)}</strong>`;
+  }
+}
+updateMargin();
+</script>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('product_edit', id=product.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+  <a href="{{ url_for('stock_entry') }}?product_id={{ product.id }}" class="btn btn-success btn-sm"><i class="bi bi-box-arrow-in-down me-1"></i>Entrada</a>
+{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card mb-3">
+      <div class="card-header p-3">Informações</div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Categoria</dt><dd class="col-7">{{ product.category_name or '—' }}</dd>
+          <dt class="col-5 text-muted">Fornecedor</dt><dd class="col-7">{{ product.supplier_name or '—' }}</dd>
+          <dt class="col-5 text-muted">Unidade</dt><dd class="col-7">{{ product.unit }}</dd>
+          <dt class="col-5 text-muted">Código</dt><dd class="col-7">{{ product.barcode or '—' }}</dd>
+          <dt class="col-5 text-muted">Cadastro</dt><dd class="col-7">{{ product.created_at[:10] }}</dd>
+        </dl>
+        {% if product.description %}<hr><p class="small mb-0 text-muted">{{ product.description }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header p-3">Preços</div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Custo</span>
+          <strong>R$ {{ '%.2f'|format(product.cost_price) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Venda</span>
+          <strong class="text-primary">R$ {{ '%.2f'|format(product.sale_price) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Markup</span>
+          <span class="badge bg-light text-dark">{{ '%.1f'|format(product.markup_percent) }}%</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Margem</span>
+          <span class="badge bg-light text-dark">{{ '%.1f'|format(product.margin_percent) }}%</span>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted small">Lucro/un</span>
+          <strong class="{{ 'text-success' if product.sale_price > product.cost_price else 'text-danger' }}">
+            R$ {{ '%.2f'|format(product.sale_price - product.cost_price) }}
+          </strong>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header p-3">Estoque</div>
+      <div class="card-body text-center py-4">
+        <div class="display-4 fw-bold {{ 'text-danger' if product.stock_quantity <= product.min_stock and product.min_stock > 0 else 'text-success' }}">
+          {{ product.stock_quantity|int }}
+        </div>
+        <div class="text-muted">{{ product.unit }} em estoque</div>
+        {% if product.min_stock > 0 %}
+        <div class="mt-2 text-muted small">Mínimo: {{ product.min_stock|int }} {{ product.unit }}</div>
+        {% if product.stock_quantity <= product.min_stock %}
+        <div class="alert alert-danger mt-3 py-2 small">Estoque abaixo do mínimo!</div>
+        {% endif %}
+        {% endif %}
+        <hr>
+        <div class="text-muted small">Valor em estoque</div>
+        <div class="fw-bold">R$ {{ '%.2f'|format(product.stock_quantity * product.cost_price) }}</div>
+        <div class="mt-3 d-flex gap-2 justify-content-center">
+          <a href="{{ url_for('stock_entry') }}" class="btn btn-success btn-sm"><i class="bi bi-plus"></i> Entrada</a>
+          <a href="{{ url_for('stock_exit') }}" class="btn btn-danger btn-sm"><i class="bi bi-dash"></i> Saída</a>
+          <a href="{{ url_for('stock_adjust') }}" class="btn btn-warning btn-sm"><i class="bi bi-pencil"></i> Ajuste</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header p-3">Últimas Movimentações</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Tipo</th><th>Qtd</th><th>Data</th></tr></thead>
+          <tbody>
+          {% for m in movements %}
+          <tr>
+            <td>
+              <span class="badge badge-{{ m.type }}">
+                {{ 'Entrada' if m.type=='entrada' else ('Saída' if m.type=='saida' else 'Ajuste') }}
+              </span>
+              <small class="d-block text-muted">{{ m.reason or '' }}</small>
+            </td>
+            <td>{{ m.quantity|int }} {{ product.unit }}</td>
+            <td class="text-muted small">{{ m.created_at[:10] }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-3">Sem movimentações</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

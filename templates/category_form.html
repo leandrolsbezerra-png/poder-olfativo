@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if cat else 'Nova' }} Categoria{% endblock %}
+{% block page_title %}{{ 'Editar' if cat else 'Nova' }} Categoria{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome *</label>
+            <input type="text" name="name" class="form-control" value="{{ cat.name if cat else '' }}" required autofocus>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Descrição</label>
+            <input type="text" name="description" class="form-control" value="{{ cat.description if cat else '' }}">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <a href="{{ url_for('categories') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

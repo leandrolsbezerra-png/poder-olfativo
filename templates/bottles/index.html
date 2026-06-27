@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Frascos Originais{% endblock %}
+{% block page_title %}Frascos Originais{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('bottle_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Registrar Frasco</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Perfume</th><th>Volume</th><th>Restante</th><th class="text-end">Custo</th><th class="text-end">R$/ml</th><th>Fornecedor</th><th>Compra</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for b in bottles %}
+      <tr>
+        <td>
+          <div class="fw-semibold">{{ b.brand_name }}</div>
+          <div class="text-muted small">{{ b.perfume_name }}</div>
+        </td>
+        <td>{{ b.volume_ml|int }}ml</td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress flex-grow-1" style="height:6px;width:80px">
+              <div class="progress-bar" style="width:{{ b.pct_remaining }}%;background:{{ '#c9a96e' if b.pct_remaining > 20 else '#ef4444' }}"></div>
+            </div>
+            <span class="small {{ 'text-danger fw-bold' if b.pct_remaining <= 10 }}">{{ b.remaining_ml|round(1) }}ml</span>
+          </div>
+        </td>
+        <td class="text-end">R$ {{ '%.2f'|format(b.cost_price) }}</td>
+        <td class="text-end text-muted small">R$ {{ '%.3f'|format(b.cost_per_ml) }}</td>
+        <td class="text-muted small">{{ b.supplier_name or '—' }}</td>
+        <td class="text-muted small">{{ b.purchase_date }}</td>
+        <td>
+          <form method="post" action="{{ url_for('bottle_inactivate', id=b.id) }}" onsubmit="return confirm('Remover frasco?')">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">Nenhum frasco registrado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

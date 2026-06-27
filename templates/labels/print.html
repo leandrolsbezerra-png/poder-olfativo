@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Etiquetas — Poder Olfativo</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI', Arial, sans-serif; background:#fff; }
+
+    .toolbar {
+      position:fixed; top:0; left:0; right:0; z-index:100;
+      background:#1a1a2e; padding:10px 20px;
+      display:flex; align-items:center; gap:16px;
+    }
+    .toolbar span { color:#c9a96e; font-weight:700; font-size:14px; }
+    .toolbar .info { color:#888; font-size:12px; }
+    .btn-print { background:#c9a96e; border:none; padding:7px 20px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; }
+    .btn-close { background:transparent; border:1px solid #444; color:#aaa; padding:7px 14px; border-radius:6px; cursor:pointer; font-size:13px; }
+
+    .page { padding:10mm; padding-top:60px; }
+    .grid { display:flex; flex-wrap:wrap; gap:3mm; }
+
+    /* Label */
+    .label {
+      border:1.5px solid #c9a96e;
+      border-radius:3mm;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      background:#fffdf8;
+      page-break-inside:avoid;
+      width: var(--lw);
+      height: var(--lh);
+    }
+    .label-inner { display:flex; flex:1; overflow:hidden; }
+
+    /* Photo side */
+    .label-photo {
+      width:35%;
+      background:#f5f0e8;
+      display:flex; align-items:center; justify-content:center;
+      border-right:1px solid #e8dcc8;
+      flex-shrink:0;
+      overflow:hidden;
+    }
+    .label-photo img { width:100%; height:100%; object-fit:contain; padding:1.5mm; mix-blend-mode:multiply; }
+    .label-photo .no-photo {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      color:#c9a96e; gap:2px; padding:4px;
+    }
+    .label-photo .no-photo span { font-size:6pt; color:#bbb; text-align:center; }
+
+    /* Content side */
+    .label-content { flex:1; padding:2mm 2.5mm; display:flex; flex-direction:column; justify-content:space-between; }
+
+    .brand-name { font-size:6pt; color:#999; text-transform:uppercase; letter-spacing:.5px; }
+    .perfume-name { font-size:9pt; font-weight:800; color:#1a1a2e; line-height:1.1; }
+    .conc-family { font-size:6.5pt; color:#888; margin-top:1px; }
+
+    /* Checkboxes */
+    .sizes-section { margin-top:auto; padding-top:2mm; border-top:1px dashed #e0d5c5; }
+    .sizes-label { font-size:5.5pt; color:#aaa; text-transform:uppercase; letter-spacing:.3px; margin-bottom:1.5mm; }
+    .sizes-grid { display:flex; flex-wrap:wrap; gap:1.5mm; }
+    .size-item { display:flex; align-items:center; gap:1mm; }
+    .checkbox { width:4mm; height:4mm; border:1.5px solid #c9a96e; border-radius:.5mm; flex-shrink:0; background:#fff; }
+    .size-text { font-size:7pt; font-weight:700; color:#1a1a2e; }
+
+    /* Footer */
+    .label-footer {
+      background:#1a1a2e; padding:1mm 2.5mm;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .label-footer .handle { font-size:5.5pt; color:#c9a96e; font-weight:600; letter-spacing:.3px; }
+    .label-footer .price { font-size:7pt; font-weight:700; color:#fff; }
+
+    /* ── Layout MINI (38×21mm) — mesma estrutura, escala reduzida ── */
+    .label.mini { border-radius:1.5mm; border-width:1px; }
+    .label.mini .label-photo { width:30%; }
+    .label.mini .label-content { padding:1mm 1.2mm; }
+    .label.mini .brand-name { font-size:4pt; letter-spacing:.2px; }
+    .label.mini .perfume-name { font-size:5.5pt; }
+    .label.mini .conc-family { font-size:4pt; margin-top:.5px; }
+    .label.mini .sizes-section { padding-top:1mm; }
+    .label.mini .sizes-label { font-size:3.5pt; margin-bottom:.8mm; }
+    .label.mini .sizes-grid { gap:.8mm; }
+    .label.mini .size-item { gap:.6mm; }
+    .label.mini .checkbox { width:2.5mm; height:2.5mm; border-width:1px; border-radius:.3mm; }
+    .label.mini .size-text { font-size:5pt; }
+    .label.mini .label-footer { padding:.5mm 1.2mm; }
+    .label.mini .label-footer .handle { font-size:4pt; }
+    .label.mini .label-footer .price { font-size:4.5pt; }
+
+    @media print {
+      .toolbar { display:none; }
+      .page { padding:8mm; padding-top:8mm; }
+      @page { margin:5mm; size:A4; }
+      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span>Poder Olfativo — Etiquetas</span>
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
+  <button class="btn-close" onclick="window.close()">Fechar</button>
+  <span class="info">{{ perfumes|length }} perfume(s) · {{ qty }} etiqueta(s) cada · {{ label_w }}×{{ label_h }}mm · Frasco {{ bottle_type }}</span>
+  <span class="info" style="margin-left:auto">Para gráfica: Arquivo → Imprimir → Salvar como PDF</span>
+</div>
+
+<div class="page">
+  <div class="grid" style="--lw:{{ label_w }}mm; --lh:{{ label_h }}mm">
+    {% for p in perfumes %}
+    {% set size_list = p.sizes.split(',') if p.sizes else [] %}
+    {% set price_list = p.prices.split(',') if p.prices else [] %}
+
+    {% for _ in range(qty) %}
+    {% set is_mini = label_w == '38' %}
+    <div class="label {{ 'mini' if is_mini }}">
+      <div class="label-inner">
+
+        <!-- Foto -->
+        <div class="label-photo">
+          {% if p.photo_filename %}
+          <img src="/static/perfume_photos/{{ p.photo_filename }}" alt="{{ p.name }}">
+          {% else %}
+          <div class="no-photo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9a96e" stroke-width="1.5">
+              <path d="M12 2C8 2 5 7 5 12s3 10 7 10 7-5 7-10S16 2 12 2z"/>
+              <path d="M12 8v8M9 11l3-3 3 3"/>
+            </svg>
+            <span>Sem foto</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Conteúdo -->
+        <div class="label-content">
+          <div>
+            <div class="brand-name">{{ p.brand_name }}</div>
+            <div class="perfume-name">{{ p.name }}</div>
+            <div class="conc-family">{{ p.concentration }}{% if p.family %} · {{ p.family }}{% endif %}</div>
+            {% if show_notes == '1' and p.notes_top and not is_mini %}
+            <div style="font-size:5.5pt;color:#aaa;margin-top:1px">{{ p.notes_top|truncate(35,true,'…') }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Checkboxes de ml -->
+          <div class="sizes-section">
+            <div class="sizes-label">{{ 'ml' if is_mini else 'Marcar tamanho' }}</div>
+            <div class="sizes-grid">
+              {% for s in checkbox_sizes %}
+              <div class="size-item">
+                <div class="checkbox"></div>
+                <span class="size-text">{{ s }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Rodapé -->
+      <div class="label-footer">
+        <div style="display:flex;align-items:center;gap:1.5mm">
+          <img src="/static/logo.png" style="height:{{ '3.5mm' if is_mini else '7mm' }};width:{{ '3.5mm' if is_mini else '7mm' }};object-fit:contain;border-radius:50%">
+          <span class="handle">@poderolfativo</span>
+        </div>
+        {% if show_price == '1' and price_list and not is_mini %}
+        <span class="price">
+          {% for s in size_list %}{{ s }} R${{ '%.0f'|format(price_list[loop.index0]|float) if loop.index0 < price_list|length else '' }}  {% endfor %}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+
+</body>
+</html>

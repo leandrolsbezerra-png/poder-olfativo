@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Etiquetas{% endblock %}
+{% block page_title %}Etiquetas para Decants{% endblock %}
+{% block content %}
+<form action="{{ url_for('labels_print') }}" method="get" target="_blank">
+  <!-- Options bar -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Qtd por perfume</label>
+          <input type="number" name="qty" class="form-control" value="1" min="1" max="100">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Tamanho da etiqueta</label>
+          <select name="label_size" class="form-select">
+            <option value="38x21">38,1 × 21,2mm — mini</option>
+            <option value="80x45">80 × 45mm — padrão</option>
+            <option value="60x35">60 × 35mm — pequena</option>
+            <option value="100x55">100 × 55mm — grande</option>
+            <option value="50x80">50 × 80mm — vertical</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Tipo de frasco</label>
+          <select name="bottle_type" class="form-select">
+            <option value="8ml">Frasco 8ml — marca □ 2ml e □ 5ml</option>
+            <option value="15ml">Frasco 15ml — marca □ 10ml e □ 15ml</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-grow-1">
+            <i class="bi bi-printer me-1"></i>Gerar PDF / Imprimir
+          </button>
+          <button type="button" class="btn btn-outline-secondary" onclick="selectAll()">Todos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Perfume grid -->
+  <div class="row g-3">
+    {% for p in perfumes %}
+    <div class="col-md-4 col-lg-3">
+      <label class="card h-100 p-0" style="cursor:pointer;border:2px solid transparent" id="card_{{ p.id }}"
+             onclick="toggleCard({{ p.id }})">
+        <input type="checkbox" name="ids" value="{{ p.id }}" class="perfume-check d-none" id="chk_{{ p.id }}">
+        <div class="card-body p-3">
+          <div class="d-flex gap-3 align-items-center">
+            {% if p.photo_filename %}
+            <img src="{{ url_for('static', filename='perfume_photos/' + p.photo_filename) }}"
+                 style="width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0">
+            {% else %}
+            <div style="width:52px;height:52px;border-radius:8px;background:#f0ebe4;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="bi bi-droplet" style="font-size:1.4rem;color:#c9a96e"></i>
+            </div>
+            {% endif %}
+            <div>
+              <div class="text-muted small">{{ p.brand_name }}</div>
+              <div class="fw-bold small">{{ p.name }}</div>
+              <div class="text-muted" style="font-size:.7rem">{{ p.concentration }}</div>
+              <div class="mt-1 d-flex flex-wrap gap-1">
+                {% if p.sizes %}{% for s in p.sizes.split(',') %}<span class="ml-badge">{{ s }}</span>{% endfor %}{% endif %}
+              </div>
+            </div>
+          </div>
+          {% if not p.photo_filename %}
+          <a href="{{ url_for('perfume_detail', id=p.id) }}" class="btn btn-outline-secondary btn-sm w-100 mt-2 py-0 small"
+             onclick="event.stopPropagation()" style="font-size:.7rem">
+            <i class="bi bi-camera me-1"></i>Adicionar foto
+          </a>
+          {% endif %}
+        </div>
+      </label>
+    </div>
+    {% else %}
+    <div class="col-12 text-center text-muted py-5">Nenhum perfume com preço cadastrado.</div>
+    {% endfor %}
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleCard(id) {
+  const chk = document.getElementById('chk_'+id);
+  const card = document.getElementById('card_'+id);
+  chk.checked = !chk.checked;
+  card.style.borderColor = chk.checked ? '#c9a96e' : 'transparent';
+  card.style.background = chk.checked ? '#fffdf8' : '';
+}
+function selectAll() {
+  document.querySelectorAll('.perfume-check').forEach(c => {
+    c.checked = true;
+    document.getElementById('card_'+c.value).style.borderColor = '#c9a96e';
+    document.getElementById('card_'+c.value).style.background = '#fffdf8';
+  });
+}
+</script>
+{% endblock %}

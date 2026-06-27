@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Metas de Vendas{% endblock %}
+{% block page_title %}Metas de Vendas{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <!-- Current month goal -->
+  <div class="col-md-5">
+    <div class="card mb-3" style="border-left:3px solid #c9a96e">
+      <div class="card-header p-3 fw-semibold">Meta do Mês Atual</div>
+      <div class="card-body">
+        {% if current_goal and current_goal.revenue_goal > 0 %}
+        {% set pct = [[(current_sales.s / current_goal.revenue_goal * 100), 0]|max, 100]|min %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="small text-muted">Faturamento</span>
+            <span class="small fw-semibold">R$ {{ '%.2f'|format(current_sales.s) }} / R$ {{ '%.2f'|format(current_goal.revenue_goal) }}</span>
+          </div>
+          <div class="progress" style="height:12px;border-radius:99px">
+            <div class="progress-bar" style="width:{{ pct }}%;background:{% if pct >= 100 %}#22c55e{% elif pct >= 70 %}#c9a96e{% else %}#ef4444{% endif %};border-radius:99px"></div>
+          </div>
+          <div class="d-flex justify-content-between mt-1">
+            <span class="small text-muted">{{ '%.0f'|format(pct) }}% atingido</span>
+            {% if pct < 100 %}<span class="small text-muted">Faltam R$ {{ '%.2f'|format(current_goal.revenue_goal - current_sales.s) }}</span>{% else %}<span class="small text-success fw-bold">Meta batida! 🎉</span>{% endif %}
+          </div>
+        </div>
+        {% if current_goal.orders_goal > 0 %}
+        {% set pct_o = [[(current_sales.c / current_goal.orders_goal * 100), 0]|max, 100]|min %}
+        <div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="small text-muted">Vendas</span>
+            <span class="small fw-semibold">{{ current_sales.c }} / {{ current_goal.orders_goal }}</span>
+          </div>
+          <div class="progress" style="height:8px;border-radius:99px">
+            <div class="progress-bar bg-primary" style="width:{{ pct_o }}%;border-radius:99px"></div>
+          </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-muted small mb-3">Nenhuma meta definida para este mês.</div>
+        {% endif %}
+
+        <hr>
+        <form method="post">
+          <input type="hidden" name="month" value="{{ current_month }}">
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">Meta de Faturamento (R$)</label>
+            <input type="number" name="revenue_goal" class="form-control" step="0.01" min="0"
+                   value="{{ '%.2f'|format(current_goal.revenue_goal) if current_goal else '0.00' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Meta de Nº de Vendas</label>
+            <input type="number" name="orders_goal" class="form-control" min="0"
+                   value="{{ current_goal.orders_goal if current_goal else '0' }}">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Salvar Meta do Mês</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header p-3 fw-semibold">Histórico de Metas</div>
+      <div class="card-body p-0">
+        <table class="table mb-0">
+          <thead><tr><th>Mês</th><th class="text-end">Meta Fat.</th><th class="text-end">Meta Vendas</th></tr></thead>
+          <tbody>
+          {% for g in goals %}
+          <tr>
+            <td class="fw-semibold">{{ g.month }}</td>
+            <td class="text-end">R$ {{ '%.2f'|format(g.revenue_goal) }}</td>
+            <td class="text-end">{{ g.orders_goal }} vendas</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-4">Nenhuma meta cadastrada ainda.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

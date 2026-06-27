@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% block title %}Nova Venda{% endblock %}
+{% block page_title %}Nova Venda{% endblock %}
+{% block content %}
+<form method="post" id="saleForm">
+  <input type="hidden" name="items_json" id="itemsJson" value="[]">
+  <div class="row g-3">
+    <!-- Product picker -->
+    <div class="col-lg-7">
+      <div class="card mb-3">
+        <div class="card-header p-3 fw-semibold">Adicionar Decant</div>
+        <div class="card-body">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Perfume / Decant</label>
+              <select id="decantSelect" class="form-select">
+                <option value="">— Selecione —</option>
+                {% set cur_brand = '' %}
+                {% for d in decants %}
+                {% if d.brand_name != cur_brand %}
+                {% if cur_brand != '' %}</optgroup>{% endif %}
+                <optgroup label="{{ d.brand_name }}">
+                {% set cur_brand = d.brand_name %}
+                {% endif %}
+                <option value="{{ d.id }}"
+                  data-price="{{ d.sale_price }}"
+                  data-stock="{{ d.stock_quantity }}"
+                  data-name="{{ d.brand_name }} {{ d.perfume_name }} {{ d.size_ml|int }}ml"
+                  data-size="{{ d.size_ml }}"
+                  {{ 'disabled' if d.stock_quantity == 0 }}>
+                  {{ d.perfume_name }} {{ d.size_ml|int }}ml — R$ {{ '%.2f'|format(d.sale_price) }} ({{ d.stock_quantity }} un)
+                </option>
+                {% endfor %}
+                {% if cur_brand != '' %}</optgroup>{% endif %}
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">Qtd</label>
+              <input type="number" id="qtyInput" class="form-control" value="1" min="1">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">Preço (R$)</label>
+              <input type="number" id="priceInput" class="form-control" step="0.01" min="0">
+            </div>
+            <div class="col-md-2">
+              <button type="button" class="btn btn-primary w-100" onclick="addItem()"><i class="bi bi-plus-lg"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header p-3 fw-semibold">Itens da Venda</div>
+        <div class="card-body p-0">
+          <table class="table mb-0">
+            <thead><tr><th>Produto</th><th class="text-center">Qtd</th><th class="text-end">Preço</th><th class="text-end">Total</th><th></th></tr></thead>
+            <tbody id="itemsBody">
+              <tr id="emptyRow"><td colspan="5" class="text-center text-muted py-4">Nenhum item adicionado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="col-lg-5">
+      <div class="card mb-3">
+        <div class="card-header p-3 fw-semibold">Dados da Venda</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Cliente</label>
+            <select name="customer_id" class="form-select" id="customerSelect" onchange="fillCustomer()">
+              <option value="">— Consumidor (sem cadastro) —</option>
+              {% for c in customers %}
+              <option value="{{ c.id }}" data-name="{{ c.name }}" data-phone="{{ c.phone or '' }}">
+                {{ c.name }}{% if c.phone %} — {{ c.phone }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <input type="text" name="customer_name" id="customerName" class="form-control mt-1 d-none" placeholder="Nome do cliente">
+            <a href="{{ url_for('customer_new') }}" class="small text-muted mt-1 d-inline-block">
+              <i class="bi bi-person-plus me-1"></i>Cadastrar novo cliente
+            </a>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Forma de Pagamento</label>
+            <select name="payment_method" id="paymentMethod" class="form-select" onchange="updateFee()">
+              <option>Pix</option>
+              <option>Dinheiro</option>
+              <option>Cartão de Débito</option>
+              <option>Cartão de Crédito</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Taxa da maquininha / gateway (%)</label>
+            <div class="input-group">
+              <input type="number" name="payment_fee_pct" id="feePct" class="form-control"
+                     step="0.01" min="0" max="20" value="0" oninput="updateTotals()">
+              <span class="input-group-text">%</span>
+            </div>
+            <div id="feeAmount" class="text-muted small mt-1"></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Desconto (R$)</label>
+            <input type="number" name="discount" id="discount" class="form-control" step="0.01" min="0" value="0" oninput="updateTotals()">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Observações</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Opcional…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="border:2px solid #c9a96e">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">Subtotal</span><strong id="subtotalDisplay">R$ 0,00</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">Desconto</span><span class="text-danger" id="discountDisplay">— R$ 0,00</span>
+          </div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted" id="feeLabel">Taxa (0%)</span>
+            <span class="text-danger" id="feeDisplay">— R$ 0,00</span>
+          </div>
+          <div class="d-flex justify-content-between mb-3">
+            <span class="fw-bold fs-5">Total</span>
+            <strong class="fs-5" style="color:#c9a96e" id="totalDisplay">R$ 0,00</strong>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 py-2" id="submitBtn" disabled>
+            <i class="bi bi-check-circle me-1"></i>Finalizar Venda
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let items = [];
+const feeDefaults = {{ fee_defaults|tojson }};
+
+function updateFee() {
+  const method = document.getElementById('paymentMethod').value;
+  const pct = feeDefaults[method] || 0;
+  document.getElementById('feePct').value = pct;
+  updateTotals();
+}
+
+function fillCustomer() {
+  const sel = document.getElementById('customerSelect');
+  const opt = sel.options[sel.selectedIndex];
+  const nameInput = document.getElementById('customerName');
+  if (opt.value === '') {
+    nameInput.classList.remove('d-none');
+  } else {
+    nameInput.classList.add('d-none');
+    nameInput.value = opt.dataset.name || '';
+  }
+}
+
+document.getElementById('decantSelect').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  if (opt.value) document.getElementById('priceInput').value = parseFloat(opt.dataset.price).toFixed(2);
+});
+
+function addItem() {
+  const sel = document.getElementById('decantSelect');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) { alert('Selecione um produto.'); return; }
+  const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+  const price = parseFloat(document.getElementById('priceInput').value) || parseFloat(opt.dataset.price) || 0;
+  const existing = items.find(i => i.id == opt.value);
+  if (existing) { existing.qty += qty; existing.total = existing.qty * existing.price; }
+  else items.push({ id:parseInt(opt.value), name:opt.dataset.name, qty, price, total:qty*price });
+  renderItems();
+  sel.value = ''; document.getElementById('qtyInput').value = 1; document.getElementById('priceInput').value = '';
+}
+
+function removeItem(id) { items = items.filter(i => i.id !== id); renderItems(); }
+
+function renderItems() {
+  const tbody = document.getElementById('itemsBody');
+  tbody.innerHTML = '';
+  if (!items.length) {
+    tbody.innerHTML = '<tr id="emptyRow"><td colspan="5" class="text-center text-muted py-4">Nenhum item adicionado.</td></tr>';
+  } else {
+    items.forEach(i => {
+      tbody.innerHTML += `<tr>
+        <td><span class="fw-semibold small">${i.name}</span></td>
+        <td class="text-center">${i.qty}</td>
+        <td class="text-end">R$ ${i.price.toFixed(2)}</td>
+        <td class="text-end fw-semibold">R$ ${i.total.toFixed(2)}</td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="removeItem(${i.id})"><i class="bi bi-x"></i></button></td>
+      </tr>`;
+    });
+  }
+  updateTotals();
+}
+
+function updateTotals() {
+  const subtotal = items.reduce((s, i) => s + i.total, 0);
+  const discount = parseFloat(document.getElementById('discount').value) || 0;
+  const feePct = parseFloat(document.getElementById('feePct').value) || 0;
+  const total = Math.max(0, subtotal - discount);
+  const feeAmount = total * feePct / 100;
+  const liquid = total - feeAmount;
+  document.getElementById('subtotalDisplay').textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
+  document.getElementById('discountDisplay').textContent = '— R$ ' + discount.toFixed(2).replace('.', ',');
+  document.getElementById('feeLabel').textContent = `Taxa (${feePct}%)`;
+  document.getElementById('feeDisplay').textContent = feePct > 0 ? `— R$ ${feeAmount.toFixed(2).replace('.', ',')}` : '—';
+  document.getElementById('feeAmount').textContent = feePct > 0 ? `Você recebe líquido: R$ ${liquid.toFixed(2).replace('.', ',')}` : '';
+  document.getElementById('totalDisplay').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+  document.getElementById('submitBtn').disabled = items.length === 0;
+  document.getElementById('itemsJson').value = JSON.stringify(items.map(i => ({id:i.id,name:i.name,qty:i.qty,price:i.price})));
+}
+</script>
+{% endblock %}

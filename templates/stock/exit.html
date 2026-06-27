@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Saída de Estoque{% endblock %}
+{% block page_title %}Saída de Estoque{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-danger">
+      <div class="card-header p-3 text-danger fw-semibold"><i class="bi bi-box-arrow-up me-1"></i>Registrar Saída</div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Produto *</label>
+            <select name="product_id" class="form-select" required id="prodSel" onchange="updateStock()">
+              <option value="">— Selecione —</option>
+              {% for p in products %}
+              <option value="{{ p.id }}" data-stock="{{ p.stock_quantity }}" data-unit="{{ p.unit }}">{{ p.name }} ({{ p.stock_quantity|int }} {{ p.unit }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Quantidade *</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required id="qty" oninput="updatePreview()">
+            <small class="text-muted" id="stockInfo"></small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Motivo</label>
+            <select name="reason" class="form-select">
+              <option>Retirada interna</option>
+              <option>Perda/Avaria</option>
+              <option>Devolução ao fornecedor</option>
+              <option>Transferência</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Observações</label>
+            <input type="text" name="notes" class="form-control" placeholder="Opcional…">
+          </div>
+          <div id="preview" class="alert d-none py-2 small mb-3"></div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger px-4">Registrar Saída</button>
+            <a href="{{ url_for('stock_movements') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function updateStock() {
+  const sel = document.getElementById('prodSel');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('stockInfo').textContent = opt.value ? `Estoque atual: ${opt.dataset.stock} ${opt.dataset.unit}` : '';
+  updatePreview();
+}
+function updatePreview() {
+  const sel = document.getElementById('prodSel');
+  const opt = sel.options[sel.selectedIndex];
+  const qty = parseFloat(document.getElementById('qty').value) || 0;
+  const el = document.getElementById('preview');
+  if (opt.value && qty > 0) {
+    const cur = parseFloat(opt.dataset.stock);
+    const newStock = cur - qty;
+    el.className = `alert py-2 small mb-3 ${newStock < 0 ? 'alert-danger' : 'alert-warning'}`;
+    el.textContent = newStock < 0
+      ? `⚠ Quantidade maior que o estoque atual (${cur} ${opt.dataset.unit})`
+      : `Novo estoque após saída: ${newStock.toFixed(0)} ${opt.dataset.unit}`;
+    el.classList.remove('d-none');
+  } else { el.classList.add('d-none'); }
+}
+</script>
+{% endblock %}

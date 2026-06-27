@@ -1,0 +1,10 @@
+venv/
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+*.pyc
+.env
+nohup.out
+*.log
+.DS_Store

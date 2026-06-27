@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if perfume else 'Novo' }} Perfume{% endblock %}
+{% block page_title %}{{ 'Editar' if perfume else 'Novo' }} Perfume{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Marca *</label>
+              <select name="brand_id" class="form-select" required>
+                <option value="">— Selecione —</option>
+                {% for b in brands %}
+                <option value="{{ b.id }}" {{ 'selected' if perfume and perfume.brand_id==b.id }}>{{ b.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Nome da Fragrância *</label>
+              <input type="text" name="name" class="form-control" value="{{ perfume.name if perfume else '' }}" required autofocus placeholder="Ex: Black Orchid">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Concentração</label>
+              <select name="concentration" class="form-select">
+                {% for c in ['EDP','EDT','Parfum','EDC','EDP Intense','Parfum de Cologne'] %}
+                <option value="{{ c }}" {{ 'selected' if perfume and perfume.concentration==c }}>{{ c }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Gênero</label>
+              <select name="gender" class="form-select">
+                {% for g in ['Masculino','Feminino','Unissex'] %}
+                <option value="{{ g }}" {{ 'selected' if perfume and perfume.gender==g }}>{{ g }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Ano</label>
+              <input type="number" name="year" class="form-control" value="{{ perfume.year if perfume else '' }}" placeholder="Ex: 2020" min="1900" max="2030">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Família Olfativa</label>
+              <select name="family" class="form-select">
+                <option value="">— Selecione —</option>
+                {% for fam in ['Floral','Floral Frutal','Floral Aquático','Amadeirado','Amadeirado Especiado','Oriental','Oriental Floral','Oriental Especiado','Cítrico','Aquático / Marinho','Fougère','Chypre','Couro','Gourmand','Aromático','Aldéico'] %}
+                <option value="{{ fam }}" {{ 'selected' if perfume and perfume.family==fam }}>{{ fam }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold"><i class="bi bi-wind me-1 text-muted"></i>Notas de Topo</label>
+              <input type="text" name="notes_top" class="form-control" value="{{ perfume.notes_top if perfume else '' }}" placeholder="Ex: Bergamota, Limão, Pimenta Rosa">
+              <small class="text-muted">As primeiras notas que se percebem (evaporam em ~30min)</small>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold"><i class="bi bi-heart me-1 text-muted"></i>Notas de Coração</label>
+              <input type="text" name="notes_heart" class="form-control" value="{{ perfume.notes_heart if perfume else '' }}" placeholder="Ex: Rosa, Jasmim, Íris">
+              <small class="text-muted">O corpo central da fragrância (1h–4h)</small>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold"><i class="bi bi-layers me-1 text-muted"></i>Notas de Fundo</label>
+              <input type="text" name="notes_base" class="form-control" value="{{ perfume.notes_base if perfume else '' }}" placeholder="Ex: Âmbar, Sândalo, Almíscar, Baunilha">
+              <small class="text-muted">Notas que ficam na pele por mais tempo</small>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descrição / Observações</label>
+              <textarea name="description" class="form-control" rows="2" placeholder="Informações adicionais, dicas de uso, ocasião…">{{ perfume.description if perfume else '' }}</textarea>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">Salvar Perfume</button>
+            <a href="{{ url_for('perfumes') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
