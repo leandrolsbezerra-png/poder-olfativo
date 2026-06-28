@@ -157,6 +157,12 @@
     <a href="{{ url_for('settings') }}" class="{{ 'active' if request.endpoint=='settings' }}" onclick="closeSidebar()">
       <i class="bi bi-gear"></i> Configurações
     </a>
+
+    <div style="padding:.75rem 1.5rem .75rem; margin-top:auto; border-top:1px solid #2d2d4e;">
+      <a href="{{ url_for('logout') }}" style="display:flex;align-items:center;gap:.6rem;color:#64748b;text-decoration:none;font-size:.8rem;">
+        <i class="bi bi-box-arrow-left"></i> Sair
+      </a>
+    </div>
   </nav>
 </div>
 
