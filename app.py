@@ -107,11 +107,22 @@ def init_db():
 
         CREATE TABLE sales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER REFERENCES customers(id),
             customer_name TEXT DEFAULT 'Consumidor',
             sale_date TEXT DEFAULT (datetime('now','localtime')),
             subtotal REAL DEFAULT 0, discount REAL DEFAULT 0, total REAL DEFAULT 0,
-            payment_method TEXT DEFAULT 'Pix', notes TEXT, status TEXT DEFAULT 'concluida'
+            payment_method TEXT DEFAULT 'Pix',
+            payment_fee_pct REAL DEFAULT 0, payment_fee_amount REAL DEFAULT 0,
+            notes TEXT, status TEXT DEFAULT 'concluida'
         );
+
+        CREATE TABLE IF NOT EXISTS payment_fee_defaults (
+            method TEXT PRIMARY KEY, fee_pct REAL DEFAULT 0, label TEXT
+        );
+        INSERT INTO payment_fee_defaults VALUES('Pix', 0.0, 'Pix');
+        INSERT INTO payment_fee_defaults VALUES('Dinheiro', 0.0, 'Dinheiro');
+        INSERT INTO payment_fee_defaults VALUES('Cartão de Débito', 1.5, 'Cartão de Débito');
+        INSERT INTO payment_fee_defaults VALUES('Cartão de Crédito', 3.0, 'Cartão de Crédito');
 
         CREATE TABLE sale_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,7 +139,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             size_ml REAL NOT NULL UNIQUE,
             cost REAL DEFAULT 0,
-            label TEXT
+            label TEXT,
+            multiplier REAL DEFAULT 3.0
         );
 
         CREATE TABLE IF NOT EXISTS orders (
