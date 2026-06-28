@@ -13,7 +13,10 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '')
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = psycopg2.connect(DATABASE_URL)
+        url = DATABASE_URL
+        if 'sslmode' not in url:
+            url += ('&' if '?' in url else '?') + 'sslmode=require'
+        db = g._database = psycopg2.connect(url)
     return db
 
 @app.teardown_appcontext
@@ -44,7 +47,10 @@ def execute_db(sql, args=()):
 
 
 def init_db():
-    db = psycopg2.connect(DATABASE_URL)
+    url = DATABASE_URL
+    if 'sslmode' not in url:
+        url += ('&' if '?' in url else '?') + 'sslmode=require'
+    db = psycopg2.connect(url)
     cur = db.cursor()
     cur.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name='brands')")
     if cur.fetchone()[0]:
