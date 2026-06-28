@@ -3,112 +3,158 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Decants Pro{% endblock %}</title>
+  <title>{% block title %}Poder Olfativo{% endblock %}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
-    :root { --sidebar-bg:#1a1a2e; --sidebar-hover:#16213e; --accent:#c9a96e; }
+    :root { --sidebar-bg:#1a1a2e; --sidebar-hover:#16213e; --accent:#c9a96e; --sidebar-w:240px; }
     body { background:#f8f5f0; font-family:'Segoe UI',sans-serif; }
+
+    /* ── Sidebar ── */
     #sidebar {
-      width:240px; min-height:100vh; background:var(--sidebar-bg);
-      position:fixed; top:0; left:0; z-index:100; display:flex; flex-direction:column;
+      width:var(--sidebar-w); min-height:100vh; background:var(--sidebar-bg);
+      position:fixed; top:0; left:0; z-index:200; display:flex; flex-direction:column;
+      transition:transform .25s ease;
     }
-    .brand { padding:1.25rem 1.5rem; color:#fff; font-size:1.05rem; font-weight:700; border-bottom:1px solid #2d2d4e; }
+    .brand { padding:1.1rem 1.5rem; color:#fff; font-size:1.05rem; font-weight:700; border-bottom:1px solid #2d2d4e; display:flex; align-items:center; gap:.6rem; }
     .brand span { color:var(--accent); }
-    #sidebar nav { padding:.5rem 0; flex:1; overflow-y:auto; }
+    #sidebar nav { padding:.5rem 0; flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
     .nav-section { font-size:.6rem; font-weight:700; color:#555; padding:.75rem 1.5rem .2rem; text-transform:uppercase; letter-spacing:1px; }
-    #sidebar a { display:flex; align-items:center; gap:.6rem; padding:.5rem 1.5rem; color:#94a3b8; text-decoration:none; font-size:.85rem; transition:all .15s; }
+    #sidebar a { display:flex; align-items:center; gap:.6rem; padding:.55rem 1.5rem; color:#94a3b8; text-decoration:none; font-size:.875rem; transition:all .15s; }
     #sidebar a:hover, #sidebar a.active { background:var(--sidebar-hover); color:#fff; }
     #sidebar a.active { border-left:3px solid var(--accent); color:var(--accent); }
     #sidebar a i { width:18px; text-align:center; font-size:.95rem; }
     .badge-alert { background:#ef4444; color:#fff; border-radius:99px; padding:1px 7px; font-size:.65rem; margin-left:auto; }
-    #main { margin-left:240px; min-height:100vh; }
-    .topbar { background:#fff; padding:.75rem 1.5rem; border-bottom:1px solid #e8e2d9; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
-    .topbar h1 { font-size:1.1rem; font-weight:600; color:#2d2d4e; margin:0; }
-    .page-content { padding:1.5rem; }
+
+    /* ── Main ── */
+    #main { margin-left:var(--sidebar-w); min-height:100vh; }
+    .topbar { background:#fff; padding:.75rem 1.25rem; border-bottom:1px solid #e8e2d9; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; gap:.5rem; }
+    .topbar h1 { font-size:1rem; font-weight:600; color:#2d2d4e; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .page-content { padding:1rem; }
+
+    /* ── Cards & Tables ── */
     .card { border:none; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.07); }
     .card-header { background:#fff; border-bottom:1px solid #f0ebe4; font-weight:600; color:#2d2d4e; }
     .table th { font-size:.75rem; font-weight:600; color:#888; text-transform:uppercase; background:#faf8f5; border-top:none; }
     .table td { vertical-align:middle; font-size:.875rem; }
+    .table-responsive { -webkit-overflow-scrolling:touch; }
     .btn-primary { background:#2d2d4e; border-color:#2d2d4e; }
     .btn-primary:hover { background:#1a1a2e; border-color:#1a1a2e; }
-    .btn-gold { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .ml-badge { display:inline-block; background:#2d2d4e; color:var(--accent); font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:99px; }
     .badge-masc { background:#dbeafe; color:#1e40af; }
     .badge-fem { background:#fce7f3; color:#9d174d; }
     .badge-uni { background:#f3f4f6; color:#374151; }
-    .badge-edp { background:#ede9fe; color:#5b21b6; }
-    .badge-edt { background:#d1fae5; color:#065f46; }
-    .badge-parfum { background:#fff7ed; color:#9a3412; }
     .concentration-badge { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:99px; }
-    .ml-badge { display:inline-block; background:#2d2d4e; color:var(--accent); font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:99px; }
     .perfume-card { border-left:3px solid var(--accent); }
+
+    /* ── Hamburger ── */
+    #menuToggle {
+      display:none; background:none; border:none; color:#2d2d4e;
+      font-size:1.5rem; padding:.25rem; line-height:1; cursor:pointer; flex-shrink:0;
+    }
+    #overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:150;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      #sidebar { transform:translateX(-100%); }
+      #sidebar.open { transform:translateX(0); }
+      #main { margin-left:0; }
+      #menuToggle { display:block; }
+      #overlay.open { display:block; }
+      .page-content { padding:.75rem; }
+      .topbar { padding:.6rem 1rem; }
+      .topbar h1 { font-size:.9rem; }
+
+      /* Stack topbar actions below title on very small screens */
+      .topbar-actions { display:flex; gap:.4rem; flex-wrap:wrap; }
+      .topbar-actions .btn { font-size:.75rem; padding:.3rem .6rem; }
+
+      /* Better tables on mobile */
+      .table td, .table th { font-size:.78rem; padding:.4rem .5rem; }
+
+      /* Cards full width */
+      .card { border-radius:10px; }
+
+      /* Hide text labels on small action buttons */
+      .btn-sm .btn-label { display:none; }
+
+      /* Bigger tap targets */
+      #sidebar a { padding:.7rem 1.5rem; font-size:.9rem; }
+    }
+
+    @media (min-width: 769px) {
+      #sidebar { transform:translateX(0) !important; }
+    }
   </style>
 </head>
 <body>
+
+<!-- Overlay (mobile only) -->
+<div id="overlay" onclick="closeSidebar()"></div>
+
 <div id="sidebar">
-  <div class="brand d-flex align-items-center gap-2">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Poder Olfativo" style="height:36px;width:36px;object-fit:contain;border-radius:50%">
-    <span>Poder<span style="color:var(--accent)"> Olfativo</span></span>
+  <div class="brand">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height:32px;width:32px;object-fit:contain;border-radius:50%;flex-shrink:0">
+    <span>Poder<span> Olfativo</span></span>
   </div>
   <nav>
     <div class="nav-section">Principal</div>
-    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}">
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}" onclick="closeSidebar()">
       <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
 
     <div class="nav-section">Catálogo</div>
-    <a href="{{ url_for('brands') }}" class="{{ 'active' if 'brand' in request.endpoint }}">
+    <a href="{{ url_for('brands') }}" class="{{ 'active' if 'brand' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-award"></i> Marcas
     </a>
-    <a href="{{ url_for('perfumes') }}" class="{{ 'active' if 'perfume' in request.endpoint }}">
+    <a href="{{ url_for('perfumes') }}" class="{{ 'active' if 'perfume' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-droplet"></i> Perfumes
     </a>
 
     <div class="nav-section">Estoque</div>
-    <a href="{{ url_for('bottles') }}" class="{{ 'active' if 'bottle' in request.endpoint }}">
+    <a href="{{ url_for('bottles') }}" class="{{ 'active' if 'bottle' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-prescription2"></i> Frascos Originais
     </a>
-    <a href="{{ url_for('fractionation') }}" class="{{ 'active' if request.endpoint=='fractionation' }}">
+    <a href="{{ url_for('fractionation') }}" class="{{ 'active' if request.endpoint=='fractionation' }}" onclick="closeSidebar()">
       <i class="bi bi-scissors"></i> Fracionamento
     </a>
-
-    <a href="{{ url_for('materials') }}" class="{{ 'active' if 'material' in request.endpoint }}">
+    <a href="{{ url_for('materials') }}" class="{{ 'active' if 'material' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-boxes"></i> Materiais
     </a>
 
     <div class="nav-section">Comercial</div>
-    <a href="{{ url_for('customers') }}" class="{{ 'active' if request.endpoint in ['customers','customer_new','customer_edit','customer_detail'] }}">
+    <a href="{{ url_for('customers') }}" class="{{ 'active' if request.endpoint in ['customers','customer_new','customer_edit','customer_detail'] }}" onclick="closeSidebar()">
       <i class="bi bi-people"></i> Clientes
     </a>
-    <a href="{{ url_for('orders') }}" class="{{ 'active' if 'order' in request.endpoint }}">
+    <a href="{{ url_for('orders') }}" class="{{ 'active' if 'order' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-bag"></i> Pedidos
-      {% set pending = low_stock_count %}
     </a>
-    <a href="{{ url_for('suppliers') }}" class="{{ 'active' if 'supplier' in request.endpoint }}">
-      <i class="bi bi-truck"></i> Fornecedores
-    </a>
-    <a href="{{ url_for('sale_new') }}" class="{{ 'active' if request.endpoint=='sale_new' }}">
+    <a href="{{ url_for('sale_new') }}" class="{{ 'active' if request.endpoint=='sale_new' }}" onclick="closeSidebar()">
       <i class="bi bi-cart-plus"></i> Nova Venda
     </a>
-    <a href="{{ url_for('sales') }}" class="{{ 'active' if request.endpoint in ['sales','sale_detail'] }}">
+    <a href="{{ url_for('sales') }}" class="{{ 'active' if request.endpoint in ['sales','sale_detail'] }}" onclick="closeSidebar()">
       <i class="bi bi-receipt"></i> Vendas
     </a>
-
-    <a href="{{ url_for('labels') }}" class="{{ 'active' if 'label' in request.endpoint }}">
+    <a href="{{ url_for('suppliers') }}" class="{{ 'active' if 'supplier' in request.endpoint }}" onclick="closeSidebar()">
+      <i class="bi bi-truck"></i> Fornecedores
+    </a>
+    <a href="{{ url_for('labels') }}" class="{{ 'active' if 'label' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-tag"></i> Etiquetas
     </a>
 
     <div class="nav-section">Análise</div>
-    <a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint=='reports' }}">
+    <a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint=='reports' }}" onclick="closeSidebar()">
       <i class="bi bi-bar-chart-line"></i> Relatórios
     </a>
-    <a href="{{ url_for('dre') }}" class="{{ 'active' if request.endpoint=='dre' }}">
+    <a href="{{ url_for('dre') }}" class="{{ 'active' if request.endpoint=='dre' }}" onclick="closeSidebar()">
       <i class="bi bi-file-earmark-bar-graph"></i> DRE
     </a>
-    <a href="{{ url_for('goals') }}" class="{{ 'active' if request.endpoint=='goals' }}">
+    <a href="{{ url_for('goals') }}" class="{{ 'active' if request.endpoint=='goals' }}" onclick="closeSidebar()">
       <i class="bi bi-trophy"></i> Metas
     </a>
-    <a href="{{ url_for('settings') }}" class="{{ 'active' if request.endpoint=='settings' }}">
+    <a href="{{ url_for('settings') }}" class="{{ 'active' if request.endpoint=='settings' }}" onclick="closeSidebar()">
       <i class="bi bi-gear"></i> Configurações
     </a>
   </nav>
@@ -116,8 +162,13 @@
 
 <div id="main">
   <div class="topbar">
+    <button id="menuToggle" onclick="toggleSidebar()">
+      <i class="bi bi-list"></i>
+    </button>
     <h1>{% block page_title %}{% endblock %}</h1>
-    <div class="d-flex align-items-center gap-3">{% block topbar_actions %}{% endblock %}</div>
+    <div class="topbar-actions d-flex align-items-center gap-2">
+      {% block topbar_actions %}{% endblock %}
+    </div>
   </div>
   <div class="page-content">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -133,6 +184,18 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+}
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
