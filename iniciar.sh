@@ -5,10 +5,14 @@ cd "$(dirname "$0")"
 if [ ! -d "venv" ]; then
   echo "Primeira execução — instalando dependências..."
   python3 -m venv venv
-  ./venv/bin/pip install --quiet flask
+  ./venv/bin/pip install --quiet flask gunicorn psycopg2-binary
 fi
 
-echo "Iniciando Sistema de Estoque Pro..."
+# Load .env if it exists
+if [ -f ".env" ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
+
+echo "Iniciando Poder Olfativo..."
 echo "Acesse: http://localhost:8080"
-echo "(Feche esta janela para encerrar o sistema)"
 ./venv/bin/python app.py
