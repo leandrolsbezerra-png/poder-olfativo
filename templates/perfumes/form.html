@@ -24,7 +24,7 @@
             <div class="col-md-4">
               <label class="form-label fw-semibold">Concentração</label>
               <select name="concentration" class="form-select">
-                {% for c in ['EDP','EDT','Parfum','EDC','EDP Intense','Parfum de Cologne'] %}
+                {% for c in ['EDP','EDT','Parfum','Extrait de Parfum','EDC','EDP Intense','Parfum de Cologne'] %}
                 <option value="{{ c }}" {{ 'selected' if perfume and perfume.concentration==c }}>{{ c }}</option>
                 {% endfor %}
               </select>
