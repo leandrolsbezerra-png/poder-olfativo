@@ -974,7 +974,7 @@ def labels_print():
     # Base64 das fotos dos perfumes para evitar CORS no html2canvas
     photo_b64 = {}
     for p in perfumes_list:
-        if p.get('photo_filename'):
+        if p['photo_filename']:
             photo_b64[p['id']] = to_b64(os.path.join(app.root_path, 'static', 'perfume_photos', p['photo_filename']))
 
     return render_template('labels/print.html', perfumes=perfumes_list, qty=qty,
