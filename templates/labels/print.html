@@ -105,7 +105,11 @@
   <button class="btn-print" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
   <button class="btn-close" onclick="window.close()">Fechar</button>
   <span class="info">{{ perfumes|length }} perfume(s) · {{ qty }} etiqueta(s) cada · {{ label_w }}×{{ label_h }}mm · Frasco {{ bottle_type }}</span>
-  <span class="info" style="margin-left:auto">Para gráfica: Arquivo → Imprimir → Salvar como PDF</span>
+  <span class="info" style="margin-left:auto">Para gráfica: Imprimir → Salvar PDF &nbsp;|&nbsp; Para Colacril: botão PNG abaixo</span>
+  <button class="btn-print" id="btnPng" onclick="salvarPNG()" style="background:#22c55e">
+    📷 Salvar PNG
+  </button>
+  <div id="pngStatus" style="color:#aaa;font-size:12px"></div>
 </div>
 
 <div class="page">
@@ -179,5 +183,62 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+async function salvarPNG() {
+  const labels = document.querySelectorAll('.label');
+  if (!labels.length) { alert('Nenhuma etiqueta encontrada.'); return; }
+
+  const btn = document.getElementById('btnPng');
+  const status = document.getElementById('pngStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando...';
+
+  // DPI: 300 para impressão. Resolução base do browser: 96dpi
+  const SCALE = 300 / 96;
+
+  // Dimensões da etiqueta em mm → pixels a 96dpi
+  const mmToPx = mm => mm * 96 / 25.4;
+  const labelWmm = parseFloat('{{ label_w }}');
+  const labelHmm = parseFloat('{{ label_h }}');
+
+  let count = 0;
+  for (let i = 0; i < labels.length; i++) {
+    const label = labels[i];
+    const name = label.querySelector('.perfume-name')?.textContent?.trim() || `etiqueta_${i+1}`;
+    const safeName = name.replace(/[^a-zA-Z0-9À-ɏ\s]/g, '').trim().replace(/\s+/g, '_');
+
+    status.textContent = `Gerando ${i+1}/${labels.length}...`;
+
+    try {
+      const canvas = await html2canvas(label, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#fffdf8',
+        width: mmToPx(labelWmm),
+        height: mmToPx(labelHmm),
+        logging: false,
+      });
+
+      // Download PNG
+      const link = document.createElement('a');
+      link.download = `PO_${safeName}_${labelWmm}x${labelHmm}mm.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      count++;
+
+      // Pequena pausa entre downloads
+      await new Promise(r => setTimeout(r, 400));
+    } catch(e) {
+      console.error('Erro na etiqueta', i, e);
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '📷 Salvar PNG';
+  status.textContent = `✓ ${count} PNG(s) salvo(s) — ${labelWmm}×${labelHmm}mm a 300dpi`;
+}
+</script>
 </body>
 </html>
