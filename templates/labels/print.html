@@ -194,11 +194,8 @@ async function salvarPNG() {
   btn.disabled = true;
   btn.textContent = '⏳ Gerando...';
 
-  // DPI: 300 para impressão. Resolução base do browser: 96dpi
-  const SCALE = 300 / 96;
-
-  // Dimensões da etiqueta em mm → pixels a 96dpi
-  const mmToPx = mm => mm * 96 / 25.4;
+  // Escala 8x = ~768 DPI (alta qualidade para impressão)
+  const SCALE = 8;
   const labelWmm = parseFloat('{{ label_w }}');
   const labelHmm = parseFloat('{{ label_h }}');
 
@@ -216,9 +213,8 @@ async function salvarPNG() {
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#fffdf8',
-        width: mmToPx(labelWmm),
-        height: mmToPx(labelHmm),
         logging: false,
+        imageTimeout: 0,
       });
 
       // Download PNG
