@@ -8,20 +8,49 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
     :root { --sidebar-bg:#1a1a2e; --sidebar-hover:#16213e; --accent:#c9a96e; --sidebar-w:240px; }
-    body { background:#f8f5f0; font-family:'Segoe UI',sans-serif; }
+    body { background:#f8f5f0; font-family:'Segoe UI',sans-serif; margin:0; }
 
     /* ── Sidebar ── */
     #sidebar {
-      width:var(--sidebar-w); min-height:100vh; background:var(--sidebar-bg);
-      position:fixed; top:0; left:0; z-index:200; display:flex; flex-direction:column;
+      width:var(--sidebar-w);
+      height:100vh;                  /* altura fixa para scroll funcionar */
+      background:var(--sidebar-bg);
+      position:fixed; top:0; left:0; z-index:200;
+      display:flex; flex-direction:column;
       transition:transform .25s ease;
     }
-    .brand { padding:1.1rem 1.5rem; color:#fff; font-size:1.05rem; font-weight:700; border-bottom:1px solid #2d2d4e; display:flex; align-items:center; gap:.6rem; }
+
+    /* Cabeçalho do sidebar */
+    .sidebar-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.9rem 1rem .9rem 1.5rem;
+      border-bottom:1px solid #2d2d4e;
+      flex-shrink:0;
+    }
+    .brand { display:flex; align-items:center; gap:.6rem; color:#fff; font-size:1rem; font-weight:700; }
     .brand span { color:var(--accent); }
-    #sidebar nav { padding:.5rem 0; flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#334155 #1a1a2e; }
+    .btn-close-sidebar {
+      background:none; border:none; color:#64748b; font-size:1.1rem;
+      cursor:pointer; padding:.2rem .4rem; border-radius:6px; line-height:1;
+      transition:all .15s;
+    }
+    .btn-close-sidebar:hover { background:#2d2d4e; color:#fff; }
+
+    /* Nav scrollável */
+    #sidebar nav {
+      flex:1;
+      min-height:0;                  /* essencial para scroll em flexbox */
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+      padding:.5rem 0;
+      scrollbar-width:thin;
+      scrollbar-color:#334155 #1a1a2e;
+    }
     #sidebar nav::-webkit-scrollbar { width:4px; }
     #sidebar nav::-webkit-scrollbar-track { background:#1a1a2e; }
     #sidebar nav::-webkit-scrollbar-thumb { background:#334155; border-radius:4px; }
+
     .nav-section { font-size:.6rem; font-weight:700; color:#555; padding:.75rem 1.5rem .2rem; text-transform:uppercase; letter-spacing:1px; }
     #sidebar a { display:flex; align-items:center; gap:.6rem; padding:.55rem 1.5rem; color:#94a3b8; text-decoration:none; font-size:.875rem; transition:all .15s; }
     #sidebar a:hover, #sidebar a.active { background:var(--sidebar-hover); color:#fff; }
@@ -29,11 +58,30 @@
     #sidebar a i { width:18px; text-align:center; font-size:.95rem; }
     .badge-alert { background:#ef4444; color:#fff; border-radius:99px; padding:1px 7px; font-size:.65rem; margin-left:auto; }
 
+    /* Botão Sair */
+    .nav-logout {
+      border-top:1px solid #2d2d4e;
+      padding:.4rem 0;
+      flex-shrink:0;
+    }
+    .nav-logout a {
+      display:flex; align-items:center; gap:.6rem;
+      padding:.6rem 1.5rem; color:#ef4444 !important;
+      text-decoration:none; font-size:.875rem; transition:all .15s;
+    }
+    .nav-logout a:hover { background:#2d2d4e; }
+
     /* ── Main ── */
-    #main { margin-left:var(--sidebar-w); min-height:100vh; }
+    #main { margin-left:var(--sidebar-w); min-height:100vh; transition:margin-left .25s ease; }
     .topbar { background:#fff; padding:.75rem 1.25rem; border-bottom:1px solid #e8e2d9; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; gap:.5rem; }
     .topbar h1 { font-size:1rem; font-weight:600; color:#2d2d4e; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .page-content { padding:1rem; }
+
+    /* Botão hamburguer na topbar */
+    #menuToggle { background:none; border:none; color:#2d2d4e; font-size:1.4rem; padding:.25rem; line-height:1; cursor:pointer; flex-shrink:0; }
+
+    /* Overlay mobile */
+    #overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:150; }
 
     /* ── Cards & Tables ── */
     .card { border:none; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.07); }
@@ -50,58 +98,47 @@
     .concentration-badge { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:99px; }
     .perfume-card { border-left:3px solid var(--accent); }
 
-    /* ── Hamburger ── */
-    #menuToggle {
-      display:none; background:none; border:none; color:#2d2d4e;
-      font-size:1.5rem; padding:.25rem; line-height:1; cursor:pointer; flex-shrink:0;
-    }
-    #overlay {
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:150;
-    }
+    /* Sidebar recolhida (desktop) */
+    body.sidebar-hidden #sidebar { transform:translateX(-100%); }
+    body.sidebar-hidden #main { margin-left:0; }
 
     /* ── MOBILE ── */
-    @media (max-width: 768px) {
+    @media (max-width:768px) {
       #sidebar { transform:translateX(-100%); }
       #sidebar.open { transform:translateX(0); }
-      #main { margin-left:0; }
-      #menuToggle { display:block; }
+      #main { margin-left:0 !important; }
       #overlay.open { display:block; }
       .page-content { padding:.75rem; }
       .topbar { padding:.6rem 1rem; }
       .topbar h1 { font-size:.9rem; }
-
-      /* Stack topbar actions below title on very small screens */
-      .topbar-actions { display:flex; gap:.4rem; flex-wrap:wrap; }
       .topbar-actions .btn { font-size:.75rem; padding:.3rem .6rem; }
-
-      /* Better tables on mobile */
       .table td, .table th { font-size:.78rem; padding:.4rem .5rem; }
-
-      /* Cards full width */
-      .card { border-radius:10px; }
-
-      /* Hide text labels on small action buttons */
-      .btn-sm .btn-label { display:none; }
-
-      /* Bigger tap targets */
-      #sidebar a { padding:.7rem 1.5rem; font-size:.9rem; }
     }
 
-    @media (min-width: 769px) {
+    @media (min-width:769px) {
       #sidebar { transform:translateX(0) !important; }
+      body.sidebar-hidden #sidebar { transform:translateX(-100%) !important; }
     }
   </style>
 </head>
 <body>
 
-<!-- Overlay (mobile only) -->
 <div id="overlay" onclick="closeSidebar()"></div>
 
 <div id="sidebar">
-  <div class="brand">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height:32px;width:32px;object-fit:contain;border-radius:50%;flex-shrink:0">
-    <span>Poder<span> Olfativo</span></span>
+  <!-- Cabeçalho com logo + botão fechar -->
+  <div class="sidebar-header">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo"
+           style="height:30px;width:30px;object-fit:contain;border-radius:50%;flex-shrink:0">
+      <span>Poder<span style="color:var(--accent)"> Olfativo</span></span>
+    </div>
+    <button class="btn-close-sidebar" onclick="hideSidebar()" title="Recolher menu">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
+
+  <!-- Nav com scroll -->
   <nav>
     <div class="nav-section">Principal</div>
     <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}" onclick="closeSidebar()">
@@ -161,11 +198,11 @@
       <i class="bi bi-gear"></i> Configurações
     </a>
 
-    <div style="padding:.5rem 0; border-top:1px solid #2d2d4e; margin-top:.5rem;">
-      <a href="{{ url_for('logout') }}" onclick="closeSidebar()"
-         style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;color:#ef4444;text-decoration:none;font-size:.875rem;transition:background .15s;"
-         onmouseover="this.style.background='#1e1e3a'" onmouseout="this.style.background=''">
-        <i class="bi bi-box-arrow-left" style="width:18px;text-align:center"></i> Sair da conta
+    <!-- Sair — dentro do nav para aparecer ao rolar -->
+    <div class="nav-logout">
+      <a href="{{ url_for('logout') }}" onclick="closeSidebar()">
+        <i class="bi bi-box-arrow-left" style="width:18px;text-align:center"></i>
+        Sair da conta
       </a>
     </div>
   </nav>
@@ -173,7 +210,8 @@
 
 <div id="main">
   <div class="topbar">
-    <button id="menuToggle" onclick="toggleSidebar()">
+    <!-- Hamburguer / mostrar menu -->
+    <button id="menuToggle" onclick="toggleSidebar()" title="Menu">
       <i class="bi bi-list"></i>
     </button>
     <h1>{% block page_title %}{% endblock %}</h1>
@@ -196,12 +234,27 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script>
+const isMobile = () => window.innerWidth <= 768;
+
 function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('open');
+  if (isMobile()) {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('open');
+  } else {
+    document.body.classList.toggle('sidebar-hidden');
+  }
 }
+
+function hideSidebar() {
+  if (isMobile()) {
+    closeSidebar();
+  } else {
+    document.body.classList.add('sidebar-hidden');
+  }
+}
+
 function closeSidebar() {
-  if (window.innerWidth <= 768) {
+  if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('overlay').classList.remove('open');
   }
