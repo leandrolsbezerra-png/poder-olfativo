@@ -215,6 +215,15 @@ async function salvarPNG() {
         backgroundColor: '#fffdf8',
         logging: false,
         imageTimeout: 0,
+        onclone: (clonedDoc) => {
+          // Aumenta o logo temporariamente para capturar em alta resolução
+          clonedDoc.querySelectorAll('.label-footer img').forEach(img => {
+            img.style.width = '40px';
+            img.style.height = '40px';
+            img.style.minWidth = '40px';
+            img.style.minHeight = '40px';
+          });
+        }
       });
 
       // Download PNG
