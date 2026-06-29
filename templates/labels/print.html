@@ -35,16 +35,20 @@
       position:relative;
     }
 
-    /* ── Photo — background-image para blend mode ── */
+    /* ── Photo ── */
     .label-photo {
       width:32%;
       flex-shrink:0;
-      background-color:#fffdf8;
-      background-size:contain;
-      background-repeat:no-repeat;
-      background-position:center;
-      background-blend-mode:multiply;
+      background:#fffdf8;
       border-right:1px solid #e8dcc8;
+      display:flex; align-items:center; justify-content:center;
+      overflow:hidden;
+      padding:1.5mm;
+    }
+    .label-photo img {
+      width:100%; height:100%;
+      object-fit:contain;
+      mix-blend-mode:multiply;
     }
 
     /* ── Content ── */
@@ -87,10 +91,13 @@
       padding:1mm 2mm;
       display:flex;
       align-items:center;
-      gap:1.5mm;
+      gap:1.2mm;
+      min-height:5mm;
     }
-    .handle { font-size:5.5pt; color:#c9a96e; font-weight:600; letter-spacing:0; }
-    .ig-icon { width:6pt; height:6pt; fill:#c9a96e; flex-shrink:0; }
+    .handle { font-size:5.5pt; color:#c9a96e; font-weight:600; letter-spacing:0; line-height:1; }
+    .ig-icon { width:7pt; height:7pt; fill:#c9a96e; flex-shrink:0; display:block; }
+    .label.mini .ig-icon { width:5pt; height:5pt; }
+    .label.mini .handle { font-size:4pt; }
 
     /* ── MINI (38×21mm) ── */
     .label.mini .label-photo  { width:28%; }
@@ -137,9 +144,11 @@
     <div class="label {{ 'mini' if is_mini }}">
       <div style="display:flex;flex:1;overflow:hidden">
 
-        <!-- Foto com blend mode via background-image -->
-        <div class="label-photo"
-             style="{% if photo_src %}background-image:url('{{ photo_src }}');{% endif %}">
+        <!-- Foto -->
+        <div class="label-photo">
+          {% if photo_src %}
+          <img src="{{ photo_src }}" alt="{{ p.name }}">
+          {% endif %}
         </div>
 
         <!-- Conteúdo -->
