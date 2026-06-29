@@ -161,9 +161,11 @@
       <i class="bi bi-gear"></i> Configurações
     </a>
 
-    <div style="padding:.75rem 1.5rem .75rem; margin-top:auto; border-top:1px solid #2d2d4e;">
-      <a href="{{ url_for('logout') }}" style="display:flex;align-items:center;gap:.6rem;color:#64748b;text-decoration:none;font-size:.8rem;">
-        <i class="bi bi-box-arrow-left"></i> Sair
+    <div style="padding:.5rem 0; border-top:1px solid #2d2d4e; margin-top:.5rem;">
+      <a href="{{ url_for('logout') }}" onclick="closeSidebar()"
+         style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;color:#ef4444;text-decoration:none;font-size:.875rem;transition:background .15s;"
+         onmouseover="this.style.background='#1e1e3a'" onmouseout="this.style.background=''">
+        <i class="bi bi-box-arrow-left" style="width:18px;text-align:center"></i> Sair da conta
       </a>
     </div>
   </nav>
