@@ -220,6 +220,13 @@ async function salvarPNG() {
         backgroundColor: '#fffdf8',
         logging: false,
         imageTimeout: 0,
+        onclone: (doc) => {
+          // Aumenta o logo do canto para captura nítida
+          doc.querySelectorAll('.corner-logo').forEach(el => {
+            el.style.width  = '60px';
+            el.style.height = '60px';
+          });
+        }
       });
       const link = document.createElement('a');
       link.download = `PO_${safe}_{{ label_w }}x{{ label_h }}mm.png`;
