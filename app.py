@@ -960,9 +960,15 @@ def labels_print():
     """, ids)
     w, h = label_size.split('x')
     checkbox_sizes = sizes_map.get(bottle_type, ['2ml','5ml'])
+    import base64
+    logo_b64 = ''
+    logo_path = os.path.join(app.root_path, 'static', 'logo.png')
+    if os.path.exists(logo_path):
+        with open(logo_path, 'rb') as f:
+            logo_b64 = 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
     return render_template('labels/print.html', perfumes=perfumes_list, qty=qty,
                            label_w=w, label_h=h, show_price=show_price, show_notes=show_notes,
-                           bottle_type=bottle_type, checkbox_sizes=checkbox_sizes)
+                           bottle_type=bottle_type, checkbox_sizes=checkbox_sizes, logo_b64=logo_b64)
 
 
 # ──────────────────────────── DRE ────────────────────────────
