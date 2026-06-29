@@ -961,14 +961,26 @@ def labels_print():
     w, h = label_size.split('x')
     checkbox_sizes = sizes_map.get(bottle_type, ['2ml','5ml'])
     import base64
-    logo_b64 = ''
-    logo_path = os.path.join(app.root_path, 'static', 'logo.png')
-    if os.path.exists(logo_path):
-        with open(logo_path, 'rb') as f:
-            logo_b64 = 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
+
+    def to_b64(path):
+        if path and os.path.exists(path):
+            with open(path, 'rb') as f:
+                ext = os.path.splitext(path)[1].lstrip('.') or 'png'
+                return f'data:image/{ext};base64,' + base64.b64encode(f.read()).decode()
+        return ''
+
+    logo_b64 = to_b64(os.path.join(app.root_path, 'static', 'logo.png'))
+
+    # Base64 das fotos dos perfumes para evitar CORS no html2canvas
+    photo_b64 = {}
+    for p in perfumes_list:
+        if p.get('photo_filename'):
+            photo_b64[p['id']] = to_b64(os.path.join(app.root_path, 'static', 'perfume_photos', p['photo_filename']))
+
     return render_template('labels/print.html', perfumes=perfumes_list, qty=qty,
                            label_w=w, label_h=h, show_price=show_price, show_notes=show_notes,
-                           bottle_type=bottle_type, checkbox_sizes=checkbox_sizes, logo_b64=logo_b64)
+                           bottle_type=bottle_type, checkbox_sizes=checkbox_sizes,
+                           logo_b64=logo_b64, photo_b64=photo_b64)
 
 
 # ──────────────────────────── DRE ────────────────────────────

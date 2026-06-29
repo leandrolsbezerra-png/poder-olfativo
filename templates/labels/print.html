@@ -10,17 +10,18 @@
     .toolbar {
       position:fixed; top:0; left:0; right:0; z-index:100;
       background:#1a1a2e; padding:10px 20px;
-      display:flex; align-items:center; gap:16px;
+      display:flex; align-items:center; gap:16px; flex-wrap:wrap;
     }
     .toolbar span { color:#c9a96e; font-weight:700; font-size:14px; }
-    .toolbar .info { color:#888; font-size:12px; }
+    .info { color:#888; font-size:12px; }
     .btn-print { background:#c9a96e; border:none; padding:7px 20px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; }
+    .btn-png   { background:#22c55e; border:none; padding:7px 20px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; }
     .btn-close { background:transparent; border:1px solid #444; color:#aaa; padding:7px 14px; border-radius:6px; cursor:pointer; font-size:13px; }
 
-    .page { padding:10mm; padding-top:60px; }
+    .page { padding:10mm; padding-top:65px; }
     .grid { display:flex; flex-wrap:wrap; gap:3mm; }
 
-    /* Label */
+    /* ── Label ── */
     .label {
       border:1.5px solid #c9a96e;
       border-radius:3mm;
@@ -31,64 +32,80 @@
       page-break-inside:avoid;
       width: var(--lw);
       height: var(--lh);
+      position:relative;
     }
-    .label-inner { display:flex; flex:1; overflow:hidden; }
 
-    /* Photo side */
+    /* ── Photo — background-image para blend mode ── */
     .label-photo {
-      width:35%;
-      background:#f5f0e8;
-      display:flex; align-items:center; justify-content:center;
-      border-right:1px solid #e8dcc8;
+      width:32%;
       flex-shrink:0;
-      overflow:hidden;
+      background-color:#fffdf8;
+      background-size:contain;
+      background-repeat:no-repeat;
+      background-position:center;
+      background-blend-mode:multiply;
+      border-right:1px solid #e8dcc8;
     }
-    .label-photo img { width:100%; height:100%; object-fit:contain; padding:1.5mm; mix-blend-mode:multiply; }
-    .label-photo .no-photo {
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      color:#c9a96e; gap:2px; padding:4px;
+
+    /* ── Content ── */
+    .label-content {
+      flex:1;
+      padding:2mm 2.5mm 1.5mm 2mm;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      position:relative;
     }
-    .label-photo .no-photo span { font-size:6pt; color:#bbb; text-align:center; }
 
-    /* Content side */
-    .label-content { flex:1; padding:2mm 2.5mm; display:flex; flex-direction:column; justify-content:space-between; }
+    /* ── Logo canto superior direito ── */
+    .corner-logo {
+      position:absolute;
+      top:1.5mm;
+      right:1.5mm;
+      width:{{ '5mm' if label_w|int >= 60 else '4mm' }};
+      height:{{ '5mm' if label_w|int >= 60 else '4mm' }};
+      object-fit:contain;
+      border-radius:50%;
+    }
 
-    .brand-name { font-size:6pt; color:#999; text-transform:uppercase; letter-spacing:.5px; }
-    .perfume-name { font-size:9pt; font-weight:800; color:#1a1a2e; line-height:1.1; }
-    .conc-family { font-size:6.5pt; color:#888; margin-top:1px; }
+    /* ── Texto do perfume ── */
+    .brand-name  { font-size:6pt; color:#999; text-transform:uppercase; letter-spacing:0; }
+    .perfume-name{ font-size:9pt; font-weight:800; color:#1a1a2e; line-height:1.15; margin:0.3mm 0; }
+    .conc-family { font-size:6pt; color:#888; }
 
-    /* Checkboxes */
-    .sizes-section { margin-top:auto; padding-top:2mm; border-top:1px dashed #e0d5c5; }
-    .sizes-label { font-size:5.5pt; color:#aaa; text-transform:uppercase; letter-spacing:.3px; margin-bottom:1.5mm; }
-    .sizes-grid { display:flex; flex-wrap:wrap; gap:1.5mm; }
-    .size-item { display:flex; align-items:center; gap:1mm; }
-    .checkbox { width:4mm; height:4mm; border:1.5px solid #c9a96e; border-radius:.5mm; flex-shrink:0; background:#fff; }
-    .size-text { font-size:7pt; font-weight:700; color:#1a1a2e; }
+    /* ── Checkboxes ── */
+    .sizes-section { padding-top:1.5mm; border-top:1px dashed #e0d5c5; margin-top:auto; }
+    .sizes-label   { font-size:5pt; color:#aaa; text-transform:uppercase; letter-spacing:0; margin-bottom:1mm; }
+    .sizes-grid    { display:flex; flex-wrap:wrap; gap:1.5mm; }
+    .size-item     { display:flex; align-items:center; gap:1mm; }
+    .checkbox      { width:3.5mm; height:3.5mm; border:1.5px solid #c9a96e; border-radius:.4mm; background:#fff; flex-shrink:0; }
+    .size-text     { font-size:6.5pt; font-weight:700; color:#1a1a2e; }
 
-    /* Footer */
+    /* ── Footer ── */
     .label-footer {
-      background:#1a1a2e; padding:1mm 2.5mm;
-      display:flex; justify-content:space-between; align-items:center;
+      background:#1a1a2e;
+      padding:1mm 2mm;
+      display:flex;
+      align-items:center;
+      gap:1.5mm;
     }
-    .label-footer .handle { font-size:5.5pt; color:#c9a96e; font-weight:600; letter-spacing:0; }
-    .label-footer .price { font-size:7pt; font-weight:700; color:#fff; }
+    .handle { font-size:5.5pt; color:#c9a96e; font-weight:600; letter-spacing:0; }
+    .ig-icon { width:6pt; height:6pt; fill:#c9a96e; flex-shrink:0; }
 
-    /* ── Layout MINI (38×21mm) — mesma estrutura, escala reduzida ── */
-    .label.mini { border-radius:1.5mm; border-width:1px; }
-    .label.mini .label-photo { width:30%; }
-    .label.mini .label-content { padding:1mm 1.2mm; }
-    .label.mini .brand-name { font-size:4pt; letter-spacing:.2px; }
+    /* ── MINI (38×21mm) ── */
+    .label.mini .label-photo  { width:28%; }
+    .label.mini .label-content{ padding:1mm 1.5mm 1mm 1.5mm; }
+    .label.mini .brand-name   { font-size:4pt; }
     .label.mini .perfume-name { font-size:5.5pt; }
-    .label.mini .conc-family { font-size:4pt; margin-top:.5px; }
-    .label.mini .sizes-section { padding-top:1mm; }
-    .label.mini .sizes-label { font-size:3.5pt; margin-bottom:.8mm; }
-    .label.mini .sizes-grid { gap:.8mm; }
-    .label.mini .size-item { gap:.6mm; }
-    .label.mini .checkbox { width:2.5mm; height:2.5mm; border-width:1px; border-radius:.3mm; }
-    .label.mini .size-text { font-size:5pt; }
+    .label.mini .conc-family  { font-size:4pt; }
+    .label.mini .sizes-section{ padding-top:1mm; }
+    .label.mini .sizes-label  { font-size:3.5pt; margin-bottom:.6mm; }
+    .label.mini .sizes-grid   { gap:.8mm; }
+    .label.mini .checkbox     { width:2.5mm; height:2.5mm; border-width:1px; }
+    .label.mini .size-text    { font-size:5pt; }
     .label.mini .label-footer { padding:.5mm 1.2mm; }
-    .label.mini .label-footer .handle { font-size:4pt; }
-    .label.mini .label-footer .price { font-size:4.5pt; }
+    .label.mini .handle       { font-size:4pt; }
+    .label.mini .ig-icon      { width:4pt; height:4pt; }
 
     @media print {
       .toolbar { display:none; }
@@ -102,56 +119,45 @@
 
 <div class="toolbar">
   <span>Poder Olfativo — Etiquetas</span>
-  <button class="btn-print" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir / PDF</button>
+  <button class="btn-png" id="btnPng" onclick="salvarPNG()">📷 Salvar PNG</button>
   <button class="btn-close" onclick="window.close()">Fechar</button>
-  <span class="info">{{ perfumes|length }} perfume(s) · {{ qty }} etiqueta(s) cada · {{ label_w }}×{{ label_h }}mm · Frasco {{ bottle_type }}</span>
-  <span class="info" style="margin-left:auto">Para gráfica: Imprimir → Salvar PDF &nbsp;|&nbsp; Para Colacril: botão PNG abaixo</span>
-  <button class="btn-print" id="btnPng" onclick="salvarPNG()" style="background:#22c55e">
-    📷 Salvar PNG
-  </button>
+  <span class="info">{{ perfumes|length }} perfume(s) · {{ qty }} etiq. · {{ label_w }}×{{ label_h }}mm · Frasco {{ bottle_type }}</span>
   <div id="pngStatus" style="color:#aaa;font-size:12px"></div>
 </div>
 
 <div class="page">
   <div class="grid" style="--lw:{{ label_w }}mm; --lh:{{ label_h }}mm">
-    {% for p in perfumes %}
-    {% set size_list = p.sizes.split(',') if p.sizes else [] %}
-    {% set price_list = p.prices.split(',') if p.prices else [] %}
-
-    {% for _ in range(qty) %}
     {% set is_mini = label_w == '38' %}
-    <div class="label {{ 'mini' if is_mini }}">
-      <div class="label-inner">
 
-        <!-- Foto -->
-        <div class="label-photo">
-          {% if p.photo_filename %}
-          <img src="/static/perfume_photos/{{ p.photo_filename }}" alt="{{ p.name }}">
-          {% else %}
-          <div class="no-photo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9a96e" stroke-width="1.5">
-              <path d="M12 2C8 2 5 7 5 12s3 10 7 10 7-5 7-10S16 2 12 2z"/>
-              <path d="M12 8v8M9 11l3-3 3 3"/>
-            </svg>
-            <span>Sem foto</span>
-          </div>
-          {% endif %}
+    {% for p in perfumes %}
+    {% set photo_src = photo_b64.get(p.id, '') %}
+    {% for _ in range(qty) %}
+
+    <div class="label {{ 'mini' if is_mini }}">
+      <div style="display:flex;flex:1;overflow:hidden">
+
+        <!-- Foto com blend mode via background-image -->
+        <div class="label-photo"
+             style="{% if photo_src %}background-image:url('{{ photo_src }}');{% endif %}">
         </div>
 
         <!-- Conteúdo -->
         <div class="label-content">
+          <!-- Logo canto superior direito -->
+          {% if logo_b64 %}
+          <img src="{{ logo_b64 }}" class="corner-logo" alt="logo">
+          {% endif %}
+
           <div>
             <div class="brand-name">{{ p.brand_name }}</div>
             <div class="perfume-name">{{ p.name }}</div>
             <div class="conc-family">{{ p.concentration }}{% if p.family %} · {{ p.family }}{% endif %}</div>
-            {% if show_notes == '1' and p.notes_top and not is_mini %}
-            <div style="font-size:5.5pt;color:#aaa;margin-top:1px">{{ p.notes_top|truncate(35,true,'…') }}</div>
-            {% endif %}
           </div>
 
-          <!-- Checkboxes de ml -->
+          <!-- Checkboxes -->
           <div class="sizes-section">
-            <div class="sizes-label">{{ 'ml' if is_mini else 'Marcar tamanho' }}</div>
+            <div class="sizes-label">Marcar tamanho</div>
             <div class="sizes-grid">
               {% for s in checkbox_sizes %}
               <div class="size-item">
@@ -162,22 +168,18 @@
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- Rodapé -->
+      <!-- Footer: somente IG + @poderolfativo -->
       <div class="label-footer">
-        <div style="display:flex;align-items:center;gap:1.5mm">
-          <img src="{{ logo_b64 }}" style="height:{{ '3.5mm' if is_mini else '7mm' }};width:{{ '3.5mm' if is_mini else '7mm' }};object-fit:contain;border-radius:50%">
-          <span class="handle">@poderolfativo</span>
-        </div>
-        {% if show_price == '1' and price_list and not is_mini %}
-        <span class="price">
-          {% for s in size_list %}{{ s }} R${{ '%.0f'|format(price_list[loop.index0]|float) if loop.index0 < price_list|length else '' }}  {% endfor %}
-        </span>
-        {% endif %}
+        <!-- Instagram SVG inline -->
+        <svg class="ig-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+        </svg>
+        <span class="handle">@poderolfativo</span>
       </div>
     </div>
+
     {% endfor %}
     {% endfor %}
   </div>
@@ -187,26 +189,17 @@
 <script>
 async function salvarPNG() {
   const labels = document.querySelectorAll('.label');
-  if (!labels.length) { alert('Nenhuma etiqueta encontrada.'); return; }
-
+  if (!labels.length) { alert('Nenhuma etiqueta.'); return; }
   const btn = document.getElementById('btnPng');
   const status = document.getElementById('pngStatus');
-  btn.disabled = true;
-  btn.textContent = '⏳ Gerando...';
-
-  // Escala 8x = ~768 DPI (alta qualidade para impressão)
+  btn.disabled = true; btn.textContent = '⏳ Gerando...';
   const SCALE = 8;
-  const labelWmm = parseFloat('{{ label_w }}');
-  const labelHmm = parseFloat('{{ label_h }}');
-
   let count = 0;
   for (let i = 0; i < labels.length; i++) {
     const label = labels[i];
     const name = label.querySelector('.perfume-name')?.textContent?.trim() || `etiqueta_${i+1}`;
-    const safeName = name.replace(/[^a-zA-Z0-9À-ɏ\s]/g, '').trim().replace(/\s+/g, '_');
-
+    const safe = name.replace(/[^\w\sÀ-ɏ]/g,'').trim().replace(/\s+/g,'_');
     status.textContent = `Gerando ${i+1}/${labels.length}...`;
-
     try {
       const canvas = await html2canvas(label, {
         scale: SCALE,
@@ -216,24 +209,16 @@ async function salvarPNG() {
         logging: false,
         imageTimeout: 0,
       });
-
-      // Download PNG
       const link = document.createElement('a');
-      link.download = `PO_${safeName}_${labelWmm}x${labelHmm}mm.png`;
+      link.download = `PO_${safe}_{{ label_w }}x{{ label_h }}mm.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       count++;
-
-      // Pequena pausa entre downloads
       await new Promise(r => setTimeout(r, 400));
-    } catch(e) {
-      console.error('Erro na etiqueta', i, e);
-    }
+    } catch(e) { console.error(e); }
   }
-
-  btn.disabled = false;
-  btn.textContent = '📷 Salvar PNG';
-  status.textContent = `✓ ${count} PNG(s) salvo(s) — ${labelWmm}×${labelHmm}mm a 300dpi`;
+  btn.disabled = false; btn.textContent = '📷 Salvar PNG';
+  status.textContent = `✓ ${count} PNG(s) — {{ label_w }}×{{ label_h }}mm · 8x escala`;
 }
 </script>
 </body>
