@@ -220,30 +220,6 @@ async function salvarPNG() {
         backgroundColor: '#fffdf8',
         logging: false,
         imageTimeout: 0,
-        onclone: (doc) => {
-          // Oculta o logo durante captura — será desenhado manualmente
-          doc.querySelectorAll('.corner-logo').forEach(el => el.style.display = 'none');
-        }
-      });
-
-      // Desenha o logo no canvas com qualidade original
-      {% if logo_b64 %}
-      const logoImg = new Image();
-      logoImg.src = '{{ logo_b64 }}';
-      await new Promise(r => { logoImg.onload = r; logoImg.onerror = r; });
-      const mmPx = mm => mm * 96 / 25.4 * SCALE;
-      const logoSize = mmPx({{ 8 if label_w|int >= 60 else 5 }});
-      const margin   = mmPx(1);
-      const ctx = canvas.getContext('2d');
-      const x = canvas.width - logoSize - margin;
-      const y = margin;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x + logoSize/2, y + logoSize/2, logoSize/2, 0, Math.PI*2);
-      ctx.clip();
-      ctx.drawImage(logoImg, x, y, logoSize, logoSize);
-      ctx.restore();
-      {% endif %}
       const link = document.createElement('a');
       link.download = `PO_${safe}_{{ label_w }}x{{ label_h }}mm.png`;
       link.href = canvas.toDataURL('image/png');
