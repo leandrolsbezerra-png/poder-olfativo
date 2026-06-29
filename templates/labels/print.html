@@ -220,6 +220,7 @@ async function salvarPNG() {
         backgroundColor: '#fffdf8',
         logging: false,
         imageTimeout: 0,
+      });
       const link = document.createElement('a');
       link.download = `PO_${safe}_{{ label_w }}x{{ label_h }}mm.png`;
       link.href = canvas.toDataURL('image/png');
