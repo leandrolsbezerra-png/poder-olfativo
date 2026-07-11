@@ -165,14 +165,8 @@
     <a href="{{ url_for('customers') }}" class="{{ 'active' if request.endpoint in ['customers','customer_new','customer_edit','customer_detail'] }}" onclick="closeSidebar()">
       <i class="bi bi-people"></i> Clientes
     </a>
-    <a href="{{ url_for('orders') }}" class="{{ 'active' if 'order' in request.endpoint }}" onclick="closeSidebar()">
+    <a href="{{ url_for('orders') }}" class="{{ 'active' if 'order' in request.endpoint or request.endpoint in ['sales','sale_new','sale_detail'] }}" onclick="closeSidebar()">
       <i class="bi bi-bag"></i> Pedidos
-    </a>
-    <a href="{{ url_for('sale_new') }}" class="{{ 'active' if request.endpoint=='sale_new' }}" onclick="closeSidebar()">
-      <i class="bi bi-cart-plus"></i> Nova Venda
-    </a>
-    <a href="{{ url_for('sales') }}" class="{{ 'active' if request.endpoint in ['sales','sale_detail'] }}" onclick="closeSidebar()">
-      <i class="bi bi-receipt"></i> Vendas
     </a>
     <a href="{{ url_for('suppliers') }}" class="{{ 'active' if 'supplier' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-truck"></i> Fornecedores
