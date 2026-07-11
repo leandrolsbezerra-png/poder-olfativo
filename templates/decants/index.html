@@ -45,8 +45,8 @@
         </td>
         <td><span class="ml-badge">{{ d.size_ml|int }}ml</span></td>
         <td class="text-end">
-          {% if d.sale_price > 0 %}
-          <strong>R$ {{ '%.2f'|format(d.sale_price) }}</strong>
+          {% if d.group_price > 0 %}
+          <strong>R$ {{ '%.2f'|format(d.group_price) }}</strong>
           {% else %}
           <span class="text-muted small">Sem preço</span>
           {% endif %}

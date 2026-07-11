@@ -56,9 +56,9 @@
               <div class="col-6 text-muted">ml restantes:</div><div class="col-6" id="pr_remaining">—</div>
             </div>
             {% for d in decants %}
-            {% if d.sale_price > 0 %}
+            {% if d.group_price > 0 %}
             <div id="margin_d{{ d.id }}" class="mt-2 pt-2 border-top small d-none">
-              Preço de venda: <strong>R$ {{ '%.2f'|format(d.sale_price) }}</strong>
+              Preço de venda: <strong>R$ {{ '%.2f'|format(d.group_price) }}</strong>
               → Margem: <span class="fw-bold text-primary" id="mgn_{{ d.id }}"></span>
             </div>
             {% endif %}
@@ -114,7 +114,7 @@
 const decantsData = {{ decants|map(attribute='id')|list|tojson }};
 const allDecants = [
   {% for d in decants %}
-  { id:{{ d.id }}, size_ml:{{ d.size_ml }}, perfume_id:{{ d.perfume_id }}, stock:{{ d.stock_quantity }}, sale_price:{{ d.sale_price }} },
+  { id:{{ d.id }}, size_ml:{{ d.size_ml }}, perfume_id:{{ d.perfume_id }}, stock:{{ d.stock_quantity }}, sale_price:{{ d.group_price }} },
   {% endfor %}
 ];
 const vialCosts = {

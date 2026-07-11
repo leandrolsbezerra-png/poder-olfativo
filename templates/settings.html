@@ -6,61 +6,30 @@
   <div class="col-md-6">
     <div class="card">
       <div class="card-header p-3">
-        <i class="bi bi-sliders me-2 text-muted"></i>Multiplicadores de Markup e Custo dos Frasquinhos
+        <i class="bi bi-credit-card me-2 text-muted"></i>Taxas de Pagamento
       </div>
       <div class="card-body">
         <p class="text-muted small mb-4">
-          O <strong>multiplicador</strong> define o preço de venda: <code>(custo/ml × tamanho + frasquinho) × multiplicador</code>.<br>
-          Após alterar, vá na página do perfume e clique em <strong>Recalcular tudo</strong>.
+          Preenche automaticamente a taxa ao registrar uma venda, de acordo com a forma de pagamento escolhida.
         </p>
         <form method="post">
-          <div class="table-responsive">
-            <table class="table table-sm align-middle">
-              <thead>
-                <tr>
-                  <th>Tamanho</th>
-                  <th>Multiplicador</th>
-                  <th>Custo do Frasquinho (R$)</th>
-                </tr>
-              </thead>
-              <tbody>
-              {% for v in vials %}
-              <tr>
-                <td><span class="ml-badge">{{ v.label }}</span></td>
-                <td>
-                  <div class="input-group input-group-sm" style="max-width:120px">
-                    <input type="number" name="mult_{{ v.size_ml }}" class="form-control fw-bold"
-                           step="0.1" min="1" value="{{ v.multiplier }}">
-                    <span class="input-group-text">×</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="input-group input-group-sm" style="max-width:120px">
-                    <span class="input-group-text">R$</span>
-                    <input type="number" name="vial_{{ v.size_ml }}" class="form-control"
-                           step="0.01" min="0" value="{{ '%.2f'|format(v.cost) }}">
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <tr><td colspan="3"><hr class="my-2"><strong class="small">Taxas padrão por forma de pagamento</strong></td></tr>
-          {% for f in fee_defaults %}
-          <tr>
-            <td class="small">{{ f.label }}</td>
-            <td>
-              <div class="input-group input-group-sm" style="max-width:120px">
-                <input type="number" name="fee_{{ f.method|replace(' ','_') }}" class="form-control"
-                       step="0.01" min="0" max="20" value="{{ f.fee_pct }}">
-                <span class="input-group-text">%</span>
-              </div>
-            </td>
-            <td class="text-muted small">Preenche automaticamente na venda</td>
-          </tr>
-          {% endfor %}
-          </tbody></table></div>
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Forma de pagamento</th><th style="width:140px">Taxa</th></tr></thead>
+            <tbody>
+            {% for f in fee_defaults %}
+            <tr>
+              <td class="small">{{ f.label }}</td>
+              <td>
+                <div class="input-group input-group-sm">
+                  <input type="number" name="fee_{{ f.method|replace(' ','_') }}" class="form-control"
+                         step="0.01" min="0" max="20" value="{{ f.fee_pct }}">
+                  <span class="input-group-text">%</span>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
           <button type="submit" class="btn btn-primary w-100 mt-2">
             <i class="bi bi-save me-1"></i>Salvar Configurações
           </button>

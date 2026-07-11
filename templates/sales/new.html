@@ -8,11 +8,11 @@
     <!-- Product picker -->
     <div class="col-lg-7">
       <div class="card mb-3">
-        <div class="card-header p-3 fw-semibold">Adicionar Decant</div>
+        <div class="card-header p-3 fw-semibold">Adicionar Decant ou APC</div>
         <div class="card-body">
           <div class="row g-2 align-items-end">
             <div class="col-md-6">
-              <label class="form-label small fw-semibold">Perfume / Decant</label>
+              <label class="form-label small fw-semibold">Perfume / Decant / APC</label>
               <select id="decantSelect" class="form-select">
                 <option value="">— Selecione —</option>
                 {% set cur_brand = '' %}
@@ -22,13 +22,30 @@
                 <optgroup label="{{ d.brand_name }}">
                 {% set cur_brand = d.brand_name %}
                 {% endif %}
-                <option value="{{ d.id }}"
-                  data-price="{{ d.sale_price }}"
+                <option value="decant-{{ d.id }}"
+                  data-type="decant" data-id="{{ d.id }}"
+                  data-price="{{ d.group_price }}"
                   data-stock="{{ d.stock_quantity }}"
                   data-name="{{ d.brand_name }} {{ d.perfume_name }} {{ d.size_ml|int }}ml"
                   data-size="{{ d.size_ml }}"
                   {{ 'disabled' if d.stock_quantity == 0 }}>
-                  {{ d.perfume_name }} {{ d.size_ml|int }}ml — R$ {{ '%.2f'|format(d.sale_price) }} ({{ d.stock_quantity }} un)
+                  {{ d.perfume_name }} {{ d.size_ml|int }}ml — R$ {{ '%.2f'|format(d.group_price) }} ({{ d.stock_quantity }} un)
+                </option>
+                {% endfor %}
+                {% if cur_brand != '' %}</optgroup>{% endif %}
+                {% set cur_brand = '' %}
+                {% for a in apc_products %}
+                {% if a.brand_name != cur_brand %}
+                {% if cur_brand != '' %}</optgroup>{% endif %}
+                <optgroup label="{{ a.brand_name }} — APC">
+                {% set cur_brand = a.brand_name %}
+                {% endif %}
+                <option value="apc-{{ a.id }}"
+                  data-type="apc" data-id="{{ a.id }}"
+                  data-price="{{ a.group_price }}"
+                  data-name="{{ a.brand_name }} {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC)"
+                  data-size="{{ a.size_ml }}">
+                  {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC) — R$ {{ '%.2f'|format(a.group_price) }}
                 </option>
                 {% endfor %}
                 {% if cur_brand != '' %}</optgroup>{% endif %}
@@ -171,14 +188,15 @@ function addItem() {
   if (!opt.value) { alert('Selecione um produto.'); return; }
   const qty = parseInt(document.getElementById('qtyInput').value) || 1;
   const price = parseFloat(document.getElementById('priceInput').value) || parseFloat(opt.dataset.price) || 0;
-  const existing = items.find(i => i.id == opt.value);
+  const type = opt.dataset.type, id = parseInt(opt.dataset.id), key = type + '-' + id;
+  const existing = items.find(i => i.key == key);
   if (existing) { existing.qty += qty; existing.total = existing.qty * existing.price; }
-  else items.push({ id:parseInt(opt.value), name:opt.dataset.name, qty, price, total:qty*price });
+  else items.push({ key, type, id, name:opt.dataset.name, qty, price, total:qty*price });
   renderItems();
   sel.value = ''; document.getElementById('qtyInput').value = 1; document.getElementById('priceInput').value = '';
 }
 
-function removeItem(id) { items = items.filter(i => i.id !== id); renderItems(); }
+function removeItem(key) { items = items.filter(i => i.key !== key); renderItems(); }
 
 function renderItems() {
   const tbody = document.getElementById('itemsBody');
@@ -192,7 +210,7 @@ function renderItems() {
         <td class="text-center">${i.qty}</td>
         <td class="text-end">R$ ${i.price.toFixed(2)}</td>
         <td class="text-end fw-semibold">R$ ${i.total.toFixed(2)}</td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="removeItem(${i.id})"><i class="bi bi-x"></i></button></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="removeItem('${i.key}')"><i class="bi bi-x"></i></button></td>
       </tr>`;
     });
   }
@@ -213,7 +231,7 @@ function updateTotals() {
   document.getElementById('feeAmount').textContent = feePct > 0 ? `Você recebe líquido: R$ ${liquid.toFixed(2).replace('.', ',')}` : '';
   document.getElementById('totalDisplay').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
   document.getElementById('submitBtn').disabled = items.length === 0;
-  document.getElementById('itemsJson').value = JSON.stringify(items.map(i => ({id:i.id,name:i.name,qty:i.qty,price:i.price})));
+  document.getElementById('itemsJson').value = JSON.stringify(items.map(i => ({id:i.id,type:i.type,name:i.name,qty:i.qty,price:i.price})));
 }
 </script>
 {% endblock %}
