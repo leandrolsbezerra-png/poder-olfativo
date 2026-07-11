@@ -266,6 +266,10 @@ def migrate_db():
         db.execute("INSERT INTO group_settings(key,value) VALUES('net_margin_pct','40')")
     if not db.execute("SELECT 1 FROM group_settings WHERE key='vial_cost_group'").fetchone():
         db.execute("INSERT INTO group_settings(key,value) VALUES('vial_cost_group','6')")
+    if not db.execute("SELECT 1 FROM group_settings WHERE key='min_ml'").fetchone():
+        db.execute("INSERT INTO group_settings(key,value) VALUES('min_ml','2')")
+    if not db.execute("SELECT 1 FROM group_settings WHERE key='max_ml'").fetchone():
+        db.execute("INSERT INTO group_settings(key,value) VALUES('max_ml','15')")
     if not db.execute("SELECT 1 FROM group_indirect_costs").fetchone():
         db.executemany("INSERT INTO group_indirect_costs(label,pct,sort_order) VALUES(?,?,?)", [
             ('Maquininha de cartão', 5.0, 1),
@@ -279,6 +283,11 @@ def migrate_db():
         "ALTER TABLE decants ADD COLUMN group_active INTEGER DEFAULT 1",
         "ALTER TABLE sale_items ADD COLUMN apc_id INTEGER REFERENCES apc_products(id)",
         "ALTER TABLE order_items ADD COLUMN apc_id INTEGER REFERENCES apc_products(id)",
+        "ALTER TABLE perfumes ADD COLUMN price_per_ml REAL DEFAULT 0",
+        "ALTER TABLE sale_items ADD COLUMN perfume_id INTEGER REFERENCES perfumes(id)",
+        "ALTER TABLE order_items ADD COLUMN perfume_id INTEGER REFERENCES perfumes(id)",
+        "ALTER TABLE sale_items ADD COLUMN vial_fee REAL DEFAULT 0",
+        "ALTER TABLE order_items ADD COLUMN vial_fee REAL DEFAULT 0",
     ]:
         try:
             db.execute(stmt)
@@ -342,7 +351,6 @@ def inject_globals():
 def dashboard():
     total_perfumes = query_db("SELECT COUNT(*) c FROM perfumes WHERE active=1", one=True)['c']
     total_bottles = query_db("SELECT COUNT(*) c FROM bottles WHERE active=1 AND remaining_ml>0", one=True)['c']
-    total_decants_stk = query_db("SELECT COALESCE(SUM(stock_quantity),0) c FROM decants WHERE active=1", one=True)['c']
     total_suppliers = query_db("SELECT COUNT(*) c FROM suppliers WHERE active=1", one=True)['c']
 
     sales_month = query_db(
@@ -369,29 +377,21 @@ def dashboard():
     """)
 
     top_decants = query_db("""
-        SELECT b.name brand, p.name perfume, d.size_ml, SUM(si.quantity) qty, SUM(si.total) revenue
+        SELECT b.name brand, p.name perfume, SUM(si.quantity) qty,
+            SUM(si.size_ml*si.quantity) ml_total, SUM(si.total) revenue
         FROM sale_items si
-        JOIN decants d ON d.id=si.decant_id
-        JOIN perfumes p ON p.id=d.perfume_id
+        JOIN perfumes p ON p.id=si.perfume_id
         JOIN brands b ON b.id=p.brand_id
         JOIN sales s ON s.id=si.sale_id
-        WHERE s.status!='cancelada' AND s.sale_date>=date('now','localtime','-30 days')
-        GROUP BY d.id ORDER BY qty DESC LIMIT 8
+        WHERE s.status!='cancelada' AND si.perfume_id IS NOT NULL
+            AND s.sale_date>=date('now','localtime','-30 days')
+        GROUP BY si.perfume_id ORDER BY revenue DESC LIMIT 8
     """)
 
     stock_value = query_db("""
         SELECT COALESCE(SUM(b.remaining_ml * b.cost_price / b.volume_ml),0) v
         FROM bottles b WHERE b.active=1 AND b.remaining_ml>0
     """, one=True)['v']
-
-    out_of_stock = query_db("""
-        SELECT b.name brand, p.name perfume, d.size_ml
-        FROM decants d
-        JOIN perfumes p ON p.id=d.perfume_id
-        JOIN brands b ON b.id=p.brand_id
-        WHERE d.active=1 AND d.stock_quantity=0
-        ORDER BY brand, perfume LIMIT 10
-    """)
 
     recent_sales = query_db(
         "SELECT id,customer_name,total,payment_method,sale_date FROM sales ORDER BY id DESC LIMIT 8")
@@ -404,10 +404,10 @@ def dashboard():
         total_perfumes=total_perfumes, total_bottles=total_bottles,
         net_month_value=net_month_value, net_month=net_month,
         current_goal=current_goal, pending_orders=pending_orders,
-        total_decants_stk=total_decants_stk, total_suppliers=total_suppliers,
+        total_suppliers=total_suppliers,
         sales_month=sales_month, monthly_sales=[dict(r) for r in monthly_sales],
         top_decants=top_decants, stock_value=stock_value,
-        out_of_stock=out_of_stock, recent_sales=recent_sales)
+        recent_sales=recent_sales)
 
 
 # ──────────────────────────── Brands ────────────────────────────
@@ -512,16 +512,15 @@ def perfume_detail(id):
     perfume=query_db("""SELECT p.*,b.name brand_name FROM perfumes p
         LEFT JOIN brands b ON b.id=p.brand_id WHERE p.id=?""",(id,),one=True)
     if not perfume: flash('Não encontrado.','danger'); return redirect(url_for('perfumes'))
-    decants_list=query_db("SELECT * FROM decants WHERE perfume_id=? AND active=1 ORDER BY size_ml",(id,))
     bottles=query_db("""SELECT bt.*,s.name supplier_name FROM bottles bt
         LEFT JOIN suppliers s ON s.id=bt.supplier_id
         WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC""",(id,))
     apc_list=query_db("SELECT * FROM apc_products WHERE perfume_id=? AND active=1 ORDER BY size_ml",(id,))
-    denom, vial_cost_group, net_margin_pct, indirect_pct_total = _group_pricing_params()
-    return render_template('perfumes/detail.html', perfume=perfume,
-                           decants=decants_list, bottles=bottles,
+    denom, vial_cost_group, net_margin_pct, indirect_pct_total, min_ml, max_ml = _group_pricing_params()
+    return render_template('perfumes/detail.html', perfume=perfume, bottles=bottles,
                            apc_list=apc_list, denom=denom, vial_cost_group=vial_cost_group,
-                           net_margin_pct=net_margin_pct, indirect_pct_total=indirect_pct_total)
+                           net_margin_pct=net_margin_pct, indirect_pct_total=indirect_pct_total,
+                           min_ml=min_ml, max_ml=max_ml)
 
 
 # ──────────────────────────── Bottles (frascos originais) ────────────────────────────
@@ -560,28 +559,29 @@ def bottle_new():
 # ──────────────────────────── Precificação Grupo WhatsApp ────────────────────────────
 
 def _group_pricing_params():
-    """Retorna (denom, vial_cost_group, net_margin_pct, indirect_pct_total) já validados.
+    """Retorna (denom, vial_cost_group, net_margin_pct, indirect_pct_total, min_ml, max_ml) já validados.
     denom é None se a soma de custos indiretos + margem passar de 100% (config inválida)."""
     settings_rows = {r['key']: r['value'] for r in query_db("SELECT * FROM group_settings")}
     net_margin_pct = float(settings_rows.get('net_margin_pct', 40) or 0)
     vial_cost_group = float(settings_rows.get('vial_cost_group', 0) or 0)
+    min_ml = float(settings_rows.get('min_ml', 2) or 2)
+    max_ml = float(settings_rows.get('max_ml', 15) or 15)
     indirect_pct_total = sum(r['pct'] for r in query_db(
         "SELECT * FROM group_indirect_costs WHERE active=1"))
     total_pct = indirect_pct_total + net_margin_pct
     denom = (1 - total_pct / 100) if total_pct < 100 else None
-    return denom, vial_cost_group, net_margin_pct, indirect_pct_total
+    return denom, vial_cost_group, net_margin_pct, indirect_pct_total, min_ml, max_ml
 
 def _recalculate_group_prices(perfume_id, volume_ml, cost_price):
-    """Preço de grupo = custo_direto / (1 - custos_indiretos% - margem_liquida%).
-    Decant soma o custo do frasquinho; APC (frasco original) não."""
-    denom, vial_cost_group, _, _ = _group_pricing_params()
+    """Preço/ml de grupo = custo/ml / (1 - custos_indiretos% - margem_liquida%).
+    O custo do frasquinho NÃO entra aqui — é cobrado à parte, na hora da venda.
+    APC (frasco original) usa o mesmo denom, mas seu próprio preço por tamanho fixo, sem frasquinho."""
+    denom, vial_cost_group, *_ = _group_pricing_params()
     if not denom:
         return False  # configuração de custos/margem inválida (soma >= 100%) — não recalcula
     cost_per_ml = cost_price / volume_ml
-    for d in query_db("SELECT * FROM decants WHERE perfume_id=? AND active=1", (perfume_id,)):
-        direct_cost = cost_per_ml * d['size_ml'] + vial_cost_group
-        group_price = round(direct_cost / denom, 2)
-        execute_db("UPDATE decants SET group_price=? WHERE id=?", (group_price, d['id']))
+    price_per_ml = round(cost_per_ml / denom, 4)
+    execute_db("UPDATE perfumes SET price_per_ml=? WHERE id=?", (price_per_ml, perfume_id))
     for a in query_db("SELECT * FROM apc_products WHERE perfume_id=? AND active=1", (perfume_id,)):
         direct_cost = cost_per_ml * a['size_ml']
         group_price = round(direct_cost / denom, 2)
@@ -593,75 +593,6 @@ def _recalculate_group_prices(perfume_id, volume_ml, cost_price):
 def bottle_inactivate(id):
     execute_db("UPDATE bottles SET active=0 WHERE id=?",(id,))
     flash('Frasco removido.','success'); return redirect(url_for('bottles'))
-
-
-# ──────────────────────────── Fracionamento ────────────────────────────
-
-@app.route('/fracionamento', methods=['GET','POST'])
-def fractionation():
-    if request.method=='POST':
-        bottle_id=int(request.form['bottle_id'])
-        decant_id=int(request.form['decant_id'])
-        quantity=int(request.form['quantity'])
-        vial_cost_unit=float(request.form.get('vial_cost') or 0)
-
-        bottle=query_db("SELECT * FROM bottles WHERE id=?",(bottle_id,),one=True)
-        decant=query_db("SELECT * FROM decants WHERE id=?",(decant_id,),one=True)
-        if not bottle or not decant:
-            flash('Dados inválidos.','danger'); return redirect(request.url)
-
-        ml_used=decant['size_ml']*quantity
-        if ml_used>bottle['remaining_ml']:
-            flash(f'Sem ml suficiente! Disponível: {bottle["remaining_ml"]:.1f}ml, Necessário: {ml_used:.1f}ml','danger')
-            return redirect(request.url)
-
-        cost_per_ml=bottle['cost_price']/bottle['volume_ml']
-        cost_per_unit=round(cost_per_ml*decant['size_ml']+vial_cost_unit, 4)
-
-        execute_db("UPDATE bottles SET remaining_ml=remaining_ml-? WHERE id=?",(ml_used,bottle_id))
-        execute_db("UPDATE decants SET stock_quantity=stock_quantity+? WHERE id=?",(quantity,decant_id))
-        execute_db("""INSERT INTO decant_ops(bottle_id,decant_id,quantity,ml_used,cost_per_unit,vial_cost,notes)
-            VALUES(?,?,?,?,?,?,?)""",(bottle_id,decant_id,quantity,ml_used,cost_per_unit,vial_cost_unit,
-            request.form.get('notes','')))
-
-        flash(f'{quantity} decants de {decant["size_ml"]:.0f}ml fracionados! Custo/un: R$ {cost_per_unit:.2f}','success')
-        return redirect(url_for('fractionation'))
-
-    bottles_list=query_db("""SELECT bt.id,bt.perfume_id,bt.volume_ml,bt.remaining_ml,bt.cost_price,
-        p.name perfume_name, b.name brand_name,
-        ROUND(bt.cost_price/bt.volume_ml,4) cost_per_ml
-        FROM bottles bt JOIN perfumes p ON p.id=bt.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
-        WHERE bt.active=1 AND bt.remaining_ml>0 ORDER BY b.name,p.name""")
-    decants_by_perfume=query_db("""SELECT d.id,d.size_ml,d.perfume_id,d.stock_quantity,d.group_price,
-        p.name perfume_name,b.name brand_name
-        FROM decants d JOIN perfumes p ON p.id=d.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
-        WHERE d.active=1 ORDER BY b.name,p.name,d.size_ml""")
-    vials=query_db("SELECT * FROM vial_costs ORDER BY size_ml")
-    history=query_db("""SELECT op.*,bt.volume_ml,p.name perfume_name,b.name brand_name,d.size_ml
-        FROM decant_ops op JOIN bottles bt ON bt.id=op.bottle_id
-        JOIN perfumes p ON p.id=bt.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
-        JOIN decants d ON d.id=op.decant_id
-        ORDER BY op.id DESC LIMIT 30""")
-    return render_template('fractionation.html',
-        bottles=bottles_list, decants=decants_by_perfume,
-        vials=vials, history=history)
-
-
-# ──────────────────────────── Decants stock ────────────────────────────
-
-@app.route('/decants')
-def decants_stock():
-    q=request.args.get('q',''); size=request.args.get('size',''); oos=request.args.get('oos','')
-    sql="""SELECT d.*,p.name perfume_name,b.name brand_name,p.concentration,p.gender
-        FROM decants d JOIN perfumes p ON p.id=d.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
-        WHERE d.active=1"""
-    params=[]
-    if q: sql+=" AND (p.name LIKE ? OR b.name LIKE ?)"; params+=[f'%{q}%',f'%{q}%']
-    if size: sql+=" AND d.size_ml=?"; params.append(float(size))
-    if oos: sql+=" AND d.stock_quantity=0"
-    sql+=" ORDER BY b.name,p.name,d.size_ml"
-    rows=query_db(sql,params)
-    return render_template('decants/index.html', decants=rows, q=q, size=size, oos=oos)
 
 
 # ──────────────────────────── Suppliers ────────────────────────────
@@ -736,8 +667,12 @@ def group_settings():
     if request.method == 'POST':
         net_margin_pct = float(request.form.get('net_margin_pct') or 0)
         vial_cost_group = float(request.form.get('vial_cost_group') or 0)
+        min_ml = float(request.form.get('min_ml') or 2)
+        max_ml = float(request.form.get('max_ml') or 15)
         execute_db("UPDATE group_settings SET value=? WHERE key='net_margin_pct'", (net_margin_pct,))
         execute_db("UPDATE group_settings SET value=? WHERE key='vial_cost_group'", (vial_cost_group,))
+        execute_db("UPDATE group_settings SET value=? WHERE key='min_ml'", (min_ml,))
+        execute_db("UPDATE group_settings SET value=? WHERE key='max_ml'", (max_ml,))
         for key, val in request.form.items():
             if key.startswith('indirect_pct_'):
                 cost_id = int(key.split('_')[-1])
@@ -752,13 +687,13 @@ def group_settings():
         flash('Configurações do grupo salvas! Vá no perfume e clique em "Recalcular tudo" para atualizar os preços.', 'success')
         return redirect(url_for('group_settings'))
 
-    denom, vial_cost_group, net_margin_pct, indirect_pct_total = _group_pricing_params()
+    denom, vial_cost_group, net_margin_pct, indirect_pct_total, min_ml, max_ml = _group_pricing_params()
     indirect_costs = query_db("SELECT * FROM group_indirect_costs ORDER BY sort_order, id")
     total_pct = indirect_pct_total + net_margin_pct
     return render_template('group/settings.html', indirect_costs=indirect_costs,
                            net_margin_pct=net_margin_pct, vial_cost_group=vial_cost_group,
                            indirect_pct_total=indirect_pct_total, total_pct=total_pct,
-                           denom=denom)
+                           denom=denom, min_ml=min_ml, max_ml=max_ml)
 
 @app.route('/grupo/custo-indireto/novo', methods=['POST'])
 def group_indirect_cost_new():
@@ -832,13 +767,18 @@ def sale_new():
         notes=request.form.get('notes','').strip()
         items=json.loads(request.form.get('items_json','[]'))
         if not items: flash('Adicione ao menos um item.','danger'); return redirect(request.url)
-        subtotal=sum(i['qty']*i['price'] for i in items)
+        _, vial_cost_group, _, _, min_ml, max_ml = _group_pricing_params()
+        # valida ANTES de criar a venda, pra não gerar venda "fantasma" sem itens
+        valid_items = [i for i in items if i.get('type')=='apc' or (min_ml <= float(i.get('ml') or 0) <= max_ml)]
+        if not valid_items:
+            flash('Nenhum item válido (verifique a quantidade em ml).','danger')
+            return redirect(request.url)
+        subtotal=sum(i['qty']*i['price'] for i in valid_items)
         total=max(0,subtotal-discount)
         fee_amount=round(total*fee_pct/100, 2)
         sale_id=execute_db("INSERT INTO sales(customer_id,customer_name,subtotal,discount,total,payment_method,payment_fee_pct,payment_fee_amount,notes) VALUES(?,?,?,?,?,?,?,?,?)",
                            (customer_id,customer,subtotal,discount,total,payment,fee_pct,fee_amount,notes))
-        _, vial_cost_group, _, _ = _group_pricing_params()
-        for i in items:
+        for i in valid_items:
             if i.get('type') == 'apc':
                 apc=query_db("SELECT a.*,p.name pname,b.name bname FROM apc_products a JOIN perfumes p ON p.id=a.perfume_id LEFT JOIN brands b ON b.id=p.brand_id WHERE a.id=?",(i['id'],),one=True)
                 if not apc: continue
@@ -856,33 +796,41 @@ def sale_new():
                 execute_db("INSERT INTO sale_items(sale_id,apc_id,product_label,size_ml,quantity,unit_price,cost_price,total) VALUES(?,?,?,?,?,?,?,?)",
                            (sale_id,i['id'],label,apc['size_ml'],i['qty'],i['price'],cost_unit,i['qty']*i['price']))
             else:
-                decant=query_db("SELECT d.*,p.name pname,b.name bname FROM decants d JOIN perfumes p ON p.id=d.perfume_id LEFT JOIN brands b ON b.id=p.brand_id WHERE d.id=?",(i['id'],),one=True)
-                if not decant: continue
-                label=f"{decant['bname']} {decant['pname']} {decant['size_ml']:.0f}ml"
-                bottle=query_db("""SELECT bt.cost_price,bt.volume_ml FROM bottles bt
+                # decant sob demanda: i['id'] = perfume_id, i['ml'] = quantidade em ml escolhida (livre)
+                perfume=query_db("SELECT p.*,b.name bname FROM perfumes p LEFT JOIN brands b ON b.id=p.brand_id WHERE p.id=?",(i['id'],),one=True)
+                if not perfume: continue
+                ml=float(i.get('ml') or 0)
+                if ml < min_ml or ml > max_ml: continue
+                label=f"{perfume['bname']} {perfume['name']} {ml:g}ml"
+                bottle=query_db("""SELECT bt.id,bt.cost_price,bt.volume_ml,bt.remaining_ml FROM bottles bt
                     WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC LIMIT 1""",
-                    (decant['perfume_id'],),one=True)
-                if bottle:
-                    cost_unit=round(bottle['cost_price']/bottle['volume_ml']*decant['size_ml']+vial_cost_group,4)
+                    (perfume['id'],),one=True)
+                ml_needed=ml*i['qty']
+                if bottle and bottle['remaining_ml']>=ml_needed:
+                    cost_unit=round(bottle['cost_price']/bottle['volume_ml']*ml+vial_cost_group,4)
+                    execute_db("UPDATE bottles SET remaining_ml=remaining_ml-? WHERE id=?",(ml_needed,bottle['id']))
                 else:
-                    cost_unit=0
-                execute_db("INSERT INTO sale_items(sale_id,decant_id,product_label,size_ml,quantity,unit_price,cost_price,total) VALUES(?,?,?,?,?,?,?,?)",
-                           (sale_id,i['id'],label,decant['size_ml'],i['qty'],i['price'],cost_unit,i['qty']*i['price']))
-                execute_db("UPDATE decants SET stock_quantity=MAX(0,stock_quantity-?) WHERE id=?",(i['qty'],i['id']))
+                    cost_unit=vial_cost_group
+                    flash(f"Aviso: frasco sem ml suficiente para {perfume['name']} {ml:g}ml — venda registrada, confira o estoque do frasco.",'warning')
+                execute_db("""INSERT INTO sale_items(sale_id,perfume_id,product_label,size_ml,quantity,unit_price,cost_price,total,vial_fee)
+                    VALUES(?,?,?,?,?,?,?,?,?)""",
+                    (sale_id,perfume['id'],label,ml,i['qty'],i['price'],cost_unit,i['qty']*i['price'],vial_cost_group))
         flash(f'Venda #{sale_id} registrada! Total: R$ {total:.2f}','success')
         return redirect(url_for('sale_detail', id=sale_id))
-    decants_list=query_db("""SELECT d.id,d.size_ml,d.group_price,d.stock_quantity,
-        p.name perfume_name,b.name brand_name,p.concentration
-        FROM decants d JOIN perfumes p ON p.id=d.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
-        WHERE d.active=1 AND d.group_price>0 ORDER BY b.name,p.name,d.size_ml""")
+
+    _, vial_cost_group, _, _, min_ml, max_ml = _group_pricing_params()
+    perfumes_list=query_db("""SELECT p.id,p.price_per_ml,p.name,b.name brand_name,p.concentration
+        FROM perfumes p LEFT JOIN brands b ON b.id=p.brand_id
+        WHERE p.active=1 AND p.price_per_ml>0 ORDER BY b.name,p.name""")
     apc_list=query_db("""SELECT a.id,a.size_ml,a.group_price,
         p.name perfume_name,b.name brand_name,p.concentration
         FROM apc_products a JOIN perfumes p ON p.id=a.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
         WHERE a.active=1 AND a.group_price>0 ORDER BY b.name,p.name,a.size_ml""")
     customers_list = query_db("SELECT id, name, phone FROM customers WHERE active=1 ORDER BY name")
     fee_defaults = {r['method']: r['fee_pct'] for r in query_db("SELECT method, fee_pct FROM payment_fee_defaults")}
-    return render_template('sales/new.html', decants=decants_list, apc_products=apc_list,
-                           customers=customers_list, fee_defaults=fee_defaults)
+    return render_template('sales/new.html', perfumes=perfumes_list, apc_products=apc_list,
+                           customers=customers_list, fee_defaults=fee_defaults,
+                           vial_cost_group=vial_cost_group, min_ml=min_ml, max_ml=max_ml)
 
 @app.route('/vendas/<int:id>')
 def sale_detail(id):
@@ -897,16 +845,22 @@ def sale_cancel(id):
     if sale and sale['status']!='cancelada':
         items=query_db("SELECT * FROM sale_items WHERE sale_id=?",(id,))
         for i in items:
+            perfume_id = None
             if i['apc_id']:
                 apc=query_db("SELECT perfume_id FROM apc_products WHERE id=?",(i['apc_id'],),one=True)
-                if apc:
-                    bottle=query_db("""SELECT id FROM bottles WHERE perfume_id=? AND active=1
-                        ORDER BY id DESC LIMIT 1""",(apc['perfume_id'],),one=True)
-                    if bottle:
-                        execute_db("UPDATE bottles SET remaining_ml=remaining_ml+? WHERE id=?",
-                                   (i['size_ml']*i['quantity'],bottle['id']))
-            else:
+                if apc: perfume_id = apc['perfume_id']
+            elif i['perfume_id']:
+                perfume_id = i['perfume_id']
+            elif i['decant_id']:
+                # vendas antigas (pré-decant-sob-demanda), ainda usam stock_quantity de decants
                 execute_db("UPDATE decants SET stock_quantity=stock_quantity+? WHERE id=?",(i['quantity'],i['decant_id']))
+                continue
+            if perfume_id:
+                bottle=query_db("""SELECT id FROM bottles WHERE perfume_id=? AND active=1
+                    ORDER BY id DESC LIMIT 1""",(perfume_id,),one=True)
+                if bottle:
+                    execute_db("UPDATE bottles SET remaining_ml=remaining_ml+? WHERE id=?",
+                               (i['size_ml']*i['quantity'],bottle['id']))
         execute_db("UPDATE sales SET status='cancelada' WHERE id=?",(id,))
         flash('Venda cancelada e estoque restaurado.','warning')
     return redirect(url_for('sale_detail', id=id))
@@ -1007,11 +961,16 @@ def order_new():
         notes = request.form.get('notes','').strip()
         items = json.loads(request.form.get('items_json','[]'))
         if not items: flash('Adicione ao menos um item.','danger'); return redirect(request.url)
-        subtotal = sum(i['qty']*i['price'] for i in items)
+        _, _, _, _, min_ml, max_ml = _group_pricing_params()
+        valid_items = [i for i in items if i.get('type')=='apc' or (min_ml <= float(i.get('ml') or 0) <= max_ml)]
+        if not valid_items:
+            flash('Nenhum item válido (verifique a quantidade em ml).','danger')
+            return redirect(request.url)
+        subtotal = sum(i['qty']*i['price'] for i in valid_items)
         total = max(0, subtotal - discount)
         oid = execute_db("""INSERT INTO orders(customer_id,customer_name,subtotal,discount,total,notes,created_at,updated_at)
             VALUES(?,?,?,?,?,?,?,?)""",(customer_id,customer_name,subtotal,discount,total,notes,now,now))
-        for i in items:
+        for i in valid_items:
             if i.get('type') == 'apc':
                 a = query_db("SELECT a.*,p.name pname,b.name bname FROM apc_products a JOIN perfumes p ON p.id=a.perfume_id LEFT JOIN brands b ON b.id=p.brand_id WHERE a.id=?", (i['id'],), one=True)
                 if not a: continue
@@ -1019,21 +978,26 @@ def order_new():
                 execute_db("INSERT INTO order_items(order_id,apc_id,product_label,size_ml,quantity,unit_price,total) VALUES(?,?,?,?,?,?,?)",
                            (oid,i['id'],label,a['size_ml'],i['qty'],i['price'],i['qty']*i['price']))
             else:
-                d = query_db("SELECT d.*,p.name pname,b.name bname FROM decants d JOIN perfumes p ON p.id=d.perfume_id LEFT JOIN brands b ON b.id=p.brand_id WHERE d.id=?", (i['id'],), one=True)
-                if not d: continue
-                label = f"{d['bname']} {d['pname']} {d['size_ml']:.0f}ml"
-                execute_db("INSERT INTO order_items(order_id,decant_id,product_label,size_ml,quantity,unit_price,total) VALUES(?,?,?,?,?,?,?)",
-                           (oid,i['id'],label,d['size_ml'],i['qty'],i['price'],i['qty']*i['price']))
+                p = query_db("SELECT p.*,b.name bname FROM perfumes p LEFT JOIN brands b ON b.id=p.brand_id WHERE p.id=?", (i['id'],), one=True)
+                if not p: continue
+                ml = float(i.get('ml') or 0)
+                if ml < min_ml or ml > max_ml: continue
+                label = f"{p['bname']} {p['name']} {ml:g}ml"
+                execute_db("INSERT INTO order_items(order_id,perfume_id,product_label,size_ml,quantity,unit_price,total) VALUES(?,?,?,?,?,?,?)",
+                           (oid,i['id'],label,ml,i['qty'],i['price'],i['qty']*i['price']))
         flash(f'Pedido #{oid} criado!','success')
         return redirect(url_for('order_detail', id=oid))
-    decants_list = query_db("""SELECT d.id,d.size_ml,d.group_price,p.name perfume_name,b.name brand_name,p.concentration
-        FROM decants d JOIN perfumes p ON p.id=d.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
-        WHERE d.active=1 AND d.group_price>0 ORDER BY b.name,p.name,d.size_ml""")
+    _, vial_cost_group, _, _, min_ml, max_ml = _group_pricing_params()
+    perfumes_list = query_db("""SELECT p.id,p.price_per_ml,p.name,b.name brand_name,p.concentration
+        FROM perfumes p LEFT JOIN brands b ON b.id=p.brand_id
+        WHERE p.active=1 AND p.price_per_ml>0 ORDER BY b.name,p.name""")
     apc_list = query_db("""SELECT a.id,a.size_ml,a.group_price,p.name perfume_name,b.name brand_name,p.concentration
         FROM apc_products a JOIN perfumes p ON p.id=a.perfume_id LEFT JOIN brands b ON b.id=p.brand_id
         WHERE a.active=1 AND a.group_price>0 ORDER BY b.name,p.name,a.size_ml""")
     customers_list = query_db("SELECT id,name,phone FROM customers WHERE active=1 ORDER BY name")
-    return render_template('orders/form.html', decants=decants_list, apc_products=apc_list, customers=customers_list)
+    return render_template('orders/form.html', perfumes=perfumes_list, apc_products=apc_list,
+                           customers=customers_list, vial_cost_group=vial_cost_group,
+                           min_ml=min_ml, max_ml=max_ml)
 
 @app.route('/pedidos/<int:id>')
 def order_detail(id):
@@ -1074,7 +1038,7 @@ def order_to_sale(id):
         VALUES(?,?,?,?,?,?,?,?,?)""",
         (order['customer_id'],order['customer_name'],order['subtotal'],order['discount'],
          order['total'],payment,fee_pct,fee_amount,f'Convertido do Pedido #{id}'))
-    _, vial_cost_group, _, _ = _group_pricing_params()
+    _, vial_cost_group, *_ = _group_pricing_params()
     for i in items:
         if i['apc_id']:
             a = query_db("SELECT * FROM apc_products WHERE id=?", (i['apc_id'],), one=True)
@@ -1092,14 +1056,19 @@ def order_to_sale(id):
                 VALUES(?,?,?,?,?,?,?,?)""",
                 (sale_id,i['apc_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total']))
         else:
-            bottle = query_db("""SELECT bt.cost_price,bt.volume_ml FROM bottles bt
-                JOIN decants d ON d.perfume_id=bt.perfume_id WHERE d.id=? AND bt.active=1 ORDER BY bt.id DESC LIMIT 1""",
-                (i['decant_id'],), one=True)
-            cost_unit = round(bottle['cost_price']/bottle['volume_ml']*i['size_ml']+vial_cost_group,4) if bottle else 0
-            execute_db("""INSERT INTO sale_items(sale_id,decant_id,product_label,size_ml,quantity,unit_price,cost_price,total)
-                VALUES(?,?,?,?,?,?,?,?)""",
-                (sale_id,i['decant_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total']))
-            execute_db("UPDATE decants SET stock_quantity=MAX(0,stock_quantity-?) WHERE id=?", (i['quantity'],i['decant_id']))
+            bottle = query_db("""SELECT bt.id,bt.cost_price,bt.volume_ml,bt.remaining_ml FROM bottles bt
+                WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC LIMIT 1""",
+                (i['perfume_id'],), one=True)
+            ml_needed = i['size_ml']*i['quantity']
+            if bottle and bottle['remaining_ml']>=ml_needed:
+                cost_unit = round(bottle['cost_price']/bottle['volume_ml']*i['size_ml']+vial_cost_group,4)
+                execute_db("UPDATE bottles SET remaining_ml=remaining_ml-? WHERE id=?",(ml_needed,bottle['id']))
+            else:
+                cost_unit = vial_cost_group
+                flash(f"Aviso: frasco sem ml suficiente para {i['product_label']} — convertido mesmo assim, confira o estoque.",'warning')
+            execute_db("""INSERT INTO sale_items(sale_id,perfume_id,product_label,size_ml,quantity,unit_price,cost_price,total,vial_fee)
+                VALUES(?,?,?,?,?,?,?,?,?)""",
+                (sale_id,i['perfume_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total'],vial_cost_group))
     execute_db("UPDATE orders SET status='entregue',updated_at=? WHERE id=?", (now,id))
     flash(f'Pedido convertido em Venda #{sale_id}!','success')
     return redirect(url_for('sale_detail', id=sale_id))
@@ -1134,13 +1103,11 @@ def perfume_upload_photo(id):
 @app.route('/etiquetas')
 def labels():
     perfumes_list = query_db("""
-        SELECT p.*,b.name brand_name,
-            GROUP_CONCAT(CAST(CAST(d.size_ml AS INTEGER) AS TEXT) || 'ml', ',') sizes
+        SELECT p.*,b.name brand_name
         FROM perfumes p
         LEFT JOIN brands b ON b.id=p.brand_id
-        LEFT JOIN decants d ON d.perfume_id=p.id AND d.active=1 AND d.group_price>0
-        WHERE p.active=1
-        GROUP BY p.id ORDER BY b.name,p.name
+        WHERE p.active=1 AND p.price_per_ml>0
+        ORDER BY b.name,p.name
     """)
     return render_template('labels/index.html', perfumes=perfumes_list)
 
@@ -1151,23 +1118,18 @@ def labels_print():
     label_size = request.args.get('label_size', '80x45')
     show_price = request.args.get('show_price', '1')
     show_notes = request.args.get('show_notes', '1')
-    bottle_type = request.args.get('bottle_type', '8ml')
-    sizes_map = {'8ml': ['2ml','5ml'], '15ml': ['10ml','15ml']}
     if not ids:
         flash('Selecione ao menos um perfume.','warning')
         return redirect(url_for('labels'))
+    _, vial_cost_group, _, _, min_ml, max_ml = _group_pricing_params()
     perfumes_list = query_db(f"""
-        SELECT p.*,b.name brand_name,
-            GROUP_CONCAT(CAST(CAST(d.size_ml AS INTEGER) AS TEXT) || 'ml', ',') sizes,
-            GROUP_CONCAT(d.group_price, ',') prices
+        SELECT p.*,b.name brand_name
         FROM perfumes p
         LEFT JOIN brands b ON b.id=p.brand_id
-        LEFT JOIN decants d ON d.perfume_id=p.id AND d.active=1 AND d.group_price>0
         WHERE p.id IN ({','.join('?'*len(ids))})
-        GROUP BY p.id ORDER BY b.name,p.name
+        ORDER BY b.name,p.name
     """, ids)
     w, h = label_size.split('x')
-    checkbox_sizes = sizes_map.get(bottle_type, ['2ml','5ml'])
     import base64
 
     def to_b64(path):
@@ -1187,7 +1149,7 @@ def labels_print():
 
     return render_template('labels/print.html', perfumes=perfumes_list, qty=qty,
                            label_w=w, label_h=h, show_price=show_price, show_notes=show_notes,
-                           bottle_type=bottle_type, checkbox_sizes=checkbox_sizes,
+                           vial_cost_group=vial_cost_group, min_ml=min_ml, max_ml=max_ml,
                            logo_b64=logo_b64, photo_b64=photo_b64)
 
 
@@ -1635,7 +1597,7 @@ def api_decants_by_bottle(bottle_id):
     if not bottle: return jsonify([])
     decants=query_db("SELECT * FROM decants WHERE perfume_id=? AND active=1 ORDER BY size_ml",(bottle['perfume_id'],))
     cost_per_ml=bottle['cost_price']/bottle['volume_ml']
-    _, vial_cost_group, _, _ = _group_pricing_params()
+    _, vial_cost_group, *_ = _group_pricing_params()
     result=[{
         'id':d['id'],'size_ml':d['size_ml'],'stock':d['stock_quantity'],'group_price':d['group_price'],
         'cost_per_unit':round(cost_per_ml*d['size_ml']+vial_cost_group,4),

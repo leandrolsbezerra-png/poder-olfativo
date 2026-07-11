@@ -80,13 +80,11 @@
     .perfume-name{ font-size:9pt; font-weight:800; color:#1a1a2e; line-height:1.15; margin:0.3mm 0; }
     .conc-family { font-size:6pt; color:#888; }
 
-    /* ── Checkboxes ── */
-    .sizes-section { padding-top:1.5mm; margin-top:auto; }
-    .sizes-label   { display:none; }
-    .sizes-grid    { display:flex; flex-wrap:wrap; gap:1.5mm; justify-content:center; }
-    .size-item     { display:flex; align-items:center; gap:1mm; }
-    .checkbox      { width:3.5mm; height:3.5mm; border:1.5px solid #c9a96e; border-radius:.4mm; background:#fff; flex-shrink:0; }
+    /* ── Espaço para anotar o ml exato à mão ── */
+    .sizes-section { padding-top:1.5mm; margin-top:auto; display:flex; align-items:center; gap:1.5mm; justify-content:center; }
+    .ml-blank      { border-bottom:1.2px solid #c9a96e; min-width:9mm; height:3mm; }
     .size-text     { font-size:6.5pt; font-weight:700; color:#1a1a2e; }
+    .ml-rate       { font-size:5.5pt; color:#888; }
 
     /* ── Footer ── */
     .label-footer {
@@ -107,11 +105,10 @@
     .label.mini .brand-name   { font-size:4pt; }
     .label.mini .perfume-name { font-size:5.5pt; }
     .label.mini .conc-family  { font-size:4pt; }
-    .label.mini .sizes-section{ padding-top:1mm; }
-    .label.mini .sizes-label  { font-size:3.5pt; margin-bottom:.6mm; }
-    .label.mini .sizes-grid   { gap:.8mm; }
-    .label.mini .checkbox     { width:2.5mm; height:2.5mm; border-width:1px; }
+    .label.mini .sizes-section{ padding-top:1mm; gap:1mm; }
+    .label.mini .ml-blank     { min-width:6mm; height:2.2mm; }
     .label.mini .size-text    { font-size:5pt; }
+    .label.mini .ml-rate      { font-size:4pt; }
     .label.mini .label-footer { padding:.5mm 1.2mm; }
     .label.mini .handle       { font-size:4pt; }
     .label.mini .ig-icon      { width:4pt; height:4pt; }
@@ -131,7 +128,7 @@
   <button class="btn-print" onclick="window.print()">🖨 Imprimir / PDF</button>
   <button class="btn-png" id="btnPng" onclick="salvarPNG()">📷 Salvar PNG</button>
   <button class="btn-close" onclick="window.close()">Fechar</button>
-  <span class="info">{{ perfumes|length }} perfume(s) · {{ qty }} etiq. · {{ label_w }}×{{ label_h }}mm · Frasco {{ bottle_type }}</span>
+  <span class="info">{{ perfumes|length }} perfume(s) · {{ qty }} etiq. · {{ label_w }}×{{ label_h }}mm</span>
   <div id="pngStatus" style="color:#aaa;font-size:12px"></div>
 </div>
 
@@ -166,17 +163,13 @@
             <div class="conc-family">{{ p.concentration }}{% if p.family %} · {{ p.family }}{% endif %}</div>
           </div>
 
-          <!-- Checkboxes -->
+          <!-- Espaço em branco para anotar o ml exato decantado (2 a {{ max_ml|int }}ml) -->
           <div class="sizes-section">
-            <div class="sizes-label">ML</div>
-            <div class="sizes-grid">
-              {% for s in checkbox_sizes %}
-              <div class="size-item">
-                <div class="checkbox"></div>
-                <span class="size-text">{{ s }}</span>
-              </div>
-              {% endfor %}
-            </div>
+            <span class="size-text">ML:</span>
+            <span class="ml-blank"></span>
+            {% if show_price == '1' %}
+            <span class="ml-rate">R$ {{ '%.2f'|format(p.price_per_ml) }}/ml + R$ {{ '%.2f'|format(vial_cost_group) }}</span>
+            {% endif %}
           </div>
         </div>
       </div>

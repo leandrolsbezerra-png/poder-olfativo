@@ -106,16 +106,22 @@
               Custos indiretos + margem somam 100% ou mais. <a href="{{ url_for('group_settings') }}">Ajuste aqui</a> antes de recalcular.
             </div>
             {% else %}
-            {% set cost_per_ml = bottles[0].cost_price / bottles[0].volume_ml %}
+            <div class="text-center p-3 mb-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
+              <div class="text-muted small mb-1">Preço por ml</div>
+              <div class="fs-3 fw-bold text-success">R$ {{ '%.2f'|format(perfume.price_per_ml) }}</div>
+              <div class="text-muted small mt-1">+ R$ {{ '%.2f'|format(vial_cost_group) }} de frasquinho por decant (cobrado à parte na venda)</div>
+              <div class="text-muted small">Cliente escolhe de {{ min_ml|int }}ml a {{ max_ml|int }}ml</div>
+            </div>
             <table class="table table-sm mb-0">
-              <thead><tr><th>Tamanho</th><th>Custo direto</th><th>Preço de grupo</th></tr></thead>
+              <thead><tr><th>Exemplo</th><th>Só o ml</th><th>+ frasquinho</th><th>Total</th></tr></thead>
               <tbody>
-              {% for d in decants %}
-              {% set direct_cost = cost_per_ml * d.size_ml + vial_cost_group %}
+              {% for ex_ml in [min_ml, 5, 10, max_ml] if ex_ml >= min_ml and ex_ml <= max_ml %}
+              {% set ml_price = perfume.price_per_ml * ex_ml %}
               <tr>
-                <td><span class="ml-badge">{{ d.size_ml|int }}ml</span></td>
-                <td class="text-muted small">R$ {{ '%.2f'|format(direct_cost) }}</td>
-                <td class="fw-bold text-success">R$ {{ '%.2f'|format(d.group_price) }}</td>
+                <td><span class="ml-badge">{{ ex_ml|int }}ml</span></td>
+                <td class="text-muted small">R$ {{ '%.2f'|format(ml_price) }}</td>
+                <td class="text-muted small">R$ {{ '%.2f'|format(vial_cost_group) }}</td>
+                <td class="fw-bold text-success">R$ {{ '%.2f'|format(ml_price + vial_cost_group) }}</td>
               </tr>
               {% endfor %}
               </tbody>

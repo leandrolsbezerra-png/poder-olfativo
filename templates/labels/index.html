@@ -21,13 +21,6 @@
             <option value="50x80">50 × 80mm — vertical</option>
           </select>
         </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Tipo de frasco</label>
-          <select name="bottle_type" class="form-select">
-            <option value="8ml">Frasco 8ml — marca □ 2ml e □ 5ml</option>
-            <option value="15ml">Frasco 15ml — marca □ 10ml e □ 15ml</option>
-          </select>
-        </div>
         <div class="col-md-3 d-flex gap-2">
           <button type="submit" class="btn btn-primary flex-grow-1">
             <i class="bi bi-printer me-1"></i>Gerar PDF / Imprimir
@@ -59,9 +52,7 @@
               <div class="text-muted small">{{ p.brand_name }}</div>
               <div class="fw-bold small">{{ p.name }}</div>
               <div class="text-muted" style="font-size:.7rem">{{ p.concentration }}</div>
-              <div class="mt-1 d-flex flex-wrap gap-1">
-                {% if p.sizes %}{% for s in p.sizes.split(',') %}<span class="ml-badge">{{ s }}</span>{% endfor %}{% endif %}
-              </div>
+              <div class="mt-1 text-muted" style="font-size:.7rem">R$ {{ '%.2f'|format(p.price_per_ml) }}/ml</div>
             </div>
           </div>
           {% if not p.photo_filename %}

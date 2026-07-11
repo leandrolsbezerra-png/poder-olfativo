@@ -6,16 +6,16 @@
   <div class="col-md-7">
 
     <div class="alert {{ 'alert-danger' if not denom else 'alert-light border' }} small mb-3">
-      <strong>Fórmula do preço de grupo:</strong><br>
-      <code>Preço = Custo direto ÷ (1 − custos indiretos% − margem líquida%)</code><br>
-      Decant soma o custo do frasquinho; APC (frasco original) não.
+      <strong>Fórmula do preço por ml:</strong><br>
+      <code>Preço/ml = Custo/ml ÷ (1 − custos indiretos% − margem líquida%)</code><br>
+      O custo do frasquinho <strong>não</strong> entra nessa conta — é somado à parte, na hora da venda, em cima do valor do ml vendido. No APC (frasco original) não há frasquinho.
       {% if not denom %}
       <div class="mt-2 fw-bold">⚠️ Custos indiretos ({{ indirect_pct_total }}%) + margem ({{ net_margin_pct }}%) somam {{ total_pct }}% — igual ou acima de 100%. Isso é impossível (dá preço negativo). Ajuste os valores abaixo.</div>
       {% endif %}
     </div>
 
     <div class="card mb-3">
-      <div class="card-header p-3"><i class="bi bi-graph-up-arrow me-2 text-muted"></i>Margem e Frasquinho</div>
+      <div class="card-header p-3"><i class="bi bi-graph-up-arrow me-2 text-muted"></i>Margem, Frasquinho e Faixa de ml</div>
       <div class="card-body">
         <form method="post">
           <div class="row">
@@ -28,12 +28,28 @@
               <div class="form-text">Já deve incluir tudo o que sobra pra você de lucro, depois de pagar os custos indiretos abaixo.</div>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Custo do frasquinho (decant)</label>
+              <label class="form-label">Frasquinho — cobrado à parte na venda</label>
               <div class="input-group">
                 <span class="input-group-text">R$</span>
                 <input type="number" step="0.01" min="0" name="vial_cost_group" class="form-control" value="{{ '%.2f'|format(vial_cost_group) }}">
               </div>
-              <div class="form-text">Só entra na conta do decant. No APC (frasco original) não é cobrado.</div>
+              <div class="form-text">Somado ao total do decant no momento da venda (não entra no cálculo do R$/ml). No APC não é cobrado.</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Quantidade mínima por decant</label>
+              <div class="input-group">
+                <input type="number" step="0.5" min="0.5" name="min_ml" class="form-control" value="{{ min_ml }}">
+                <span class="input-group-text">ml</span>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Quantidade máxima por decant</label>
+              <div class="input-group">
+                <input type="number" step="0.5" min="0.5" name="max_ml" class="form-control" value="{{ max_ml }}">
+                <span class="input-group-text">ml</span>
+              </div>
             </div>
           </div>
 

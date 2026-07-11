@@ -157,9 +157,6 @@
     <a href="{{ url_for('bottles') }}" class="{{ 'active' if 'bottle' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-prescription2"></i> Frascos Originais
     </a>
-    <a href="{{ url_for('fractionation') }}" class="{{ 'active' if request.endpoint=='fractionation' }}" onclick="closeSidebar()">
-      <i class="bi bi-scissors"></i> Fracionamento
-    </a>
     <a href="{{ url_for('materials') }}" class="{{ 'active' if 'material' in request.endpoint }}" onclick="closeSidebar()">
       <i class="bi bi-boxes"></i> Materiais
     </a>
