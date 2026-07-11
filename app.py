@@ -1,7 +1,14 @@
-import sqlite3, os, json, webbrowser, threading
+import sqlite3, os, json, webbrowser, threading, time
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, g, session
 from werkzeug.security import check_password_hash, generate_password_hash
+
+# Fixa o fuso horário em Brasília — sem isso, o servidor (geralmente em UTC) grava
+# datetime('now','localtime') em UTC, e uma venda feita à noite pode "pular" pro dia
+# seguinte no banco, sumindo dos filtros por data que o usuário espera.
+os.environ['TZ'] = 'America/Sao_Paulo'
+if hasattr(time, 'tzset'):
+    time.tzset()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'decants-pro-2024')
@@ -351,25 +358,31 @@ def inject_globals():
 
 @app.route('/')
 def dashboard():
+    import datetime
+    today = datetime.date.today()
+    sel_month = int(request.args.get('month') or today.month)
+    sel_year = int(request.args.get('year') or today.year)
+    selected_ym = f'{sel_year:04d}-{sel_month:02d}'
+
     total_perfumes = query_db("SELECT COUNT(*) c FROM perfumes WHERE active=1", one=True)['c']
     total_bottles = query_db("SELECT COUNT(*) c FROM bottles WHERE active=1 AND remaining_ml>0", one=True)['c']
     total_suppliers = query_db("SELECT COUNT(*) c FROM suppliers WHERE active=1", one=True)['c']
 
     sales_month = query_db(
-        "SELECT COALESCE(SUM(total),0) s, COUNT(*) c FROM sales WHERE strftime('%Y-%m',sale_date)=strftime('%Y-%m','now','localtime') AND status!='cancelada'",
-        one=True)
-    # Net revenue = revenue - cogs - payment fees
+        "SELECT COALESCE(SUM(total),0) s, COUNT(*) c FROM sales WHERE strftime('%Y-%m',sale_date)=? AND status!='cancelada'",
+        (selected_ym,), one=True)
+    # Net revenue = revenue - cogs - payment fees, no mês/ano selecionado
     net_month = query_db("""
         SELECT
             COALESCE(SUM(s.total),0) revenue,
             COALESCE(SUM(s.payment_fee_amount),0) fees,
             COALESCE((SELECT SUM(si.cost_price * si.quantity) FROM sale_items si
                       JOIN sales ss ON ss.id=si.sale_id
-                      WHERE strftime('%Y-%m',ss.sale_date)=strftime('%Y-%m','now','localtime')
+                      WHERE strftime('%Y-%m',ss.sale_date)=?
                         AND ss.status!='cancelada'),0) cogs
         FROM sales s
-        WHERE strftime('%Y-%m',s.sale_date)=strftime('%Y-%m','now','localtime') AND s.status!='cancelada'
-    """, one=True)
+        WHERE strftime('%Y-%m',s.sale_date)=? AND s.status!='cancelada'
+    """, (selected_ym, selected_ym), one=True)
     net_month_value = net_month['revenue'] - net_month['fees'] - net_month['cogs']
 
     monthly_sales = query_db("""
@@ -386,9 +399,9 @@ def dashboard():
         JOIN brands b ON b.id=p.brand_id
         JOIN sales s ON s.id=si.sale_id
         WHERE s.status!='cancelada' AND si.perfume_id IS NOT NULL
-            AND s.sale_date>=date('now','localtime','-30 days')
+            AND strftime('%Y-%m',s.sale_date)=?
         GROUP BY si.perfume_id ORDER BY revenue DESC LIMIT 8
-    """)
+    """, (selected_ym,))
 
     stock_value = query_db("""
         SELECT COALESCE(SUM(b.remaining_ml * b.cost_price / b.volume_ml),0) v
@@ -396,11 +409,10 @@ def dashboard():
     """, one=True)['v']
 
     recent_sales = query_db(
-        "SELECT id,customer_name,total,payment_method,sale_date FROM sales ORDER BY id DESC LIMIT 8")
+        "SELECT id,customer_name,total,payment_method,sale_date FROM sales WHERE strftime('%Y-%m',sale_date)=? ORDER BY id DESC LIMIT 12",
+        (selected_ym,))
 
-    import datetime
-    current_month = datetime.date.today().strftime('%Y-%m')
-    current_goal = query_db("SELECT * FROM goals WHERE month=?", (current_month,), one=True)
+    current_goal = query_db("SELECT * FROM goals WHERE month=?", (selected_ym,), one=True)
     pending_orders = query_db("SELECT COUNT(*) c FROM orders WHERE status NOT IN ('entregue','cancelado')", one=True)['c']
     return render_template('dashboard.html',
         total_perfumes=total_perfumes, total_bottles=total_bottles,
@@ -409,7 +421,8 @@ def dashboard():
         total_suppliers=total_suppliers,
         sales_month=sales_month, monthly_sales=[dict(r) for r in monthly_sales],
         top_decants=top_decants, stock_value=stock_value,
-        recent_sales=recent_sales)
+        recent_sales=recent_sales,
+        sel_month=sel_month, sel_year=sel_year, current_year=today.year, today_month=today.month)
 
 
 # ──────────────────────────── Brands ────────────────────────────
