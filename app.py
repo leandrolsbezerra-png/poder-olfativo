@@ -295,6 +295,7 @@ def migrate_db():
         "ALTER TABLE order_items ADD COLUMN perfume_id INTEGER REFERENCES perfumes(id)",
         "ALTER TABLE sale_items ADD COLUMN vial_fee REAL DEFAULT 0",
         "ALTER TABLE order_items ADD COLUMN vial_fee REAL DEFAULT 0",
+        "ALTER TABLE orders ADD COLUMN sale_id INTEGER REFERENCES sales(id)",
     ]:
         try:
             db.execute(stmt)
@@ -1051,6 +1052,10 @@ def order_detail(id):
 def order_status(id):
     import datetime
     new_status = request.form['status']
+    order = query_db("SELECT sale_id FROM orders WHERE id=?", (id,), one=True)
+    if new_status == 'entregue' and not (order and order['sale_id']):
+        flash('Esse pedido ainda não virou venda. Use o botão "Converter em Venda" (ali embaixo, com a forma de pagamento) — é isso que registra o faturamento. Marcar "Entregue" sozinho não conta como venda.','danger')
+        return redirect(url_for('order_detail', id=id))
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     execute_db("UPDATE orders SET status=?,updated_at=? WHERE id=?", (new_status,now,id))
     if new_status == 'enviado':
@@ -1068,6 +1073,9 @@ def order_to_sale(id):
     import datetime
     order = query_db("SELECT * FROM orders WHERE id=?", (id,), one=True)
     if not order: flash('Pedido não encontrado.','danger'); return redirect(url_for('orders'))
+    if order['sale_id']:
+        flash(f"Esse pedido já foi convertido antes (Venda #{order['sale_id']}).",'warning')
+        return redirect(url_for('sale_detail', id=order['sale_id']))
     items = query_db("SELECT * FROM order_items WHERE order_id=?", (id,))
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     payment = request.form.get('payment_method','Pix')
@@ -1109,7 +1117,7 @@ def order_to_sale(id):
             execute_db("""INSERT INTO sale_items(sale_id,perfume_id,product_label,size_ml,quantity,unit_price,cost_price,total,vial_fee)
                 VALUES(?,?,?,?,?,?,?,?,?)""",
                 (sale_id,i['perfume_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total'],vial_cost_group))
-    execute_db("UPDATE orders SET status='entregue',updated_at=? WHERE id=?", (now,id))
+    execute_db("UPDATE orders SET status='entregue',sale_id=?,updated_at=? WHERE id=?", (sale_id,now,id))
     flash(f'Pedido convertido em Venda #{sale_id}!','success')
     return redirect(url_for('sale_detail', id=sale_id))
 

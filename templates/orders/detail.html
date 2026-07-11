@@ -74,10 +74,19 @@
     </div>
 
     <!-- Converter em venda -->
-    {% if order.status not in ['cancelado','entregue'] %}
+    {% if order.sale_id %}
+    <div class="card border-success">
+      <div class="card-body text-center">
+        <i class="bi bi-check-circle-fill text-success fs-3"></i>
+        <div class="fw-semibold mt-1">Já virou venda</div>
+        <a href="{{ url_for('sale_detail', id=order.sale_id) }}" class="btn btn-sm btn-outline-success mt-2">Ver Venda #{{ order.sale_id }}</a>
+      </div>
+    </div>
+    {% elif order.status != 'cancelado' %}
     <div class="card border-success">
       <div class="card-header p-3 fw-semibold text-success"><i class="bi bi-arrow-right-circle me-1"></i>Converter em Venda</div>
       <div class="card-body">
+        <div class="alert alert-warning py-2 small mb-3">Esse pedido ainda <strong>não</strong> virou venda — o faturamento só entra nos relatórios depois de converter aqui.</div>
         <form method="post" action="{{ url_for('order_to_sale', id=order.id) }}">
           <div class="mb-2">
             <label class="form-label small fw-semibold">Forma de Pagamento</label>

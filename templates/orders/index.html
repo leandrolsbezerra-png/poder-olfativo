@@ -98,7 +98,12 @@
         <td class="text-muted small">{{ o.created_at[:10] if o.created_at else '—' }}</td>
         <td class="text-muted small">—</td>
         <td class="text-end fw-semibold">R$ {{ '%.2f'|format(o.total) }}</td>
-        <td><span class="badge bg-{{ STATUS_COLOR[o.status] }}">{{ STATUS_LABEL[o.status] }}</span></td>
+        <td>
+          <span class="badge bg-{{ STATUS_COLOR[o.status] }}">{{ STATUS_LABEL[o.status] }}</span>
+          {% if o.status != 'cancelado' and not o.sale_id %}
+          <span class="badge bg-danger" title="Ainda não virou venda — faturamento não contabilizado">sem venda</span>
+          {% endif %}
+        </td>
         <td class="text-muted small">{{ o.tracking_code or '—' }}</td>
         <td><a href="{{ url_for('order_detail', id=o.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
       </tr>
