@@ -108,20 +108,21 @@
             {% else %}
             <div class="text-center p-3 mb-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
               <div class="text-muted small mb-1">Preço por ml</div>
-              <div class="fs-3 fw-bold text-success">R$ {{ '%.2f'|format(perfume.price_per_ml) }}</div>
-              <div class="text-muted small mt-1">+ R$ {{ '%.2f'|format(vial_cost_group) }} de frasquinho por decant (cobrado à parte na venda)</div>
+              <div class="fs-3 fw-bold text-success">R$ {{ '%.0f'|format(perfume.price_per_ml) }}</div>
+              <div class="text-muted small mt-1">+ R$ {{ '%.0f'|format(vial_cost_group) }} de frasquinho por decant (cobrado à parte na venda)</div>
               <div class="text-muted small">Cliente escolhe de {{ min_ml|int }}ml a {{ max_ml|int }}ml</div>
             </div>
             <table class="table table-sm mb-0">
               <thead><tr><th>Exemplo</th><th>Só o ml</th><th>+ frasquinho</th><th>Total</th></tr></thead>
               <tbody>
               {% for ex_ml in [min_ml, 5, 10, max_ml] if ex_ml >= min_ml and ex_ml <= max_ml %}
-              {% set ml_price = perfume.price_per_ml * ex_ml %}
+              {% set ml_price = (perfume.price_per_ml * ex_ml) | round | int %}
+              {% set vial_round = vial_cost_group | round | int %}
               <tr>
                 <td><span class="ml-badge">{{ ex_ml|int }}ml</span></td>
-                <td class="text-muted small">R$ {{ '%.2f'|format(ml_price) }}</td>
-                <td class="text-muted small">R$ {{ '%.2f'|format(vial_cost_group) }}</td>
-                <td class="fw-bold text-success">R$ {{ '%.2f'|format(ml_price + vial_cost_group) }}</td>
+                <td class="text-muted small">R$ {{ ml_price }}</td>
+                <td class="text-muted small">R$ {{ vial_round }}</td>
+                <td class="fw-bold text-success">R$ {{ ml_price + vial_round }}</td>
               </tr>
               {% endfor %}
               </tbody>
@@ -155,7 +156,7 @@
               {% for a in apc_list %}
               <tr>
                 <td><span class="ml-badge">{{ a.size_ml|int }}ml</span></td>
-                <td class="fw-bold text-success">R$ {{ '%.2f'|format(a.group_price) }}</td>
+                <td class="fw-bold text-success">R$ {{ '%.0f'|format(a.group_price) }}</td>
                 <td class="text-end">
                   <form method="post" action="{{ url_for('apc_delete', pid=perfume.id, id=a.id) }}" onsubmit="return confirm('Remover este APC?')">
                     <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>

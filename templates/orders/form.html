@@ -17,14 +17,14 @@
                 {% for p in perfumes %}
                 {% if p.brand_name != cur_brand %}{% if cur_brand != '' %}</optgroup>{% endif %}<optgroup label="{{ p.brand_name }}">{% set cur_brand = p.brand_name %}{% endif %}
                 <option value="decant-{{ p.id }}" data-type="decant" data-id="{{ p.id }}" data-price-per-ml="{{ p.price_per_ml }}" data-name="{{ p.brand_name }} {{ p.name }}">
-                  {{ p.name }} — decant (R$ {{ '%.2f'|format(p.price_per_ml) }}/ml)
+                  {{ p.name }} — decant (R$ {{ '%.0f'|format(p.price_per_ml) }}/ml)
                 </option>
                 {% endfor %}{% if cur_brand != '' %}</optgroup>{% endif %}
                 {% set cur_brand = '' %}
                 {% for a in apc_products %}
                 {% if a.brand_name != cur_brand %}{% if cur_brand != '' %}</optgroup>{% endif %}<optgroup label="{{ a.brand_name }} — APC">{% set cur_brand = a.brand_name %}{% endif %}
                 <option value="apc-{{ a.id }}" data-type="apc" data-id="{{ a.id }}" data-price="{{ a.group_price }}" data-name="{{ a.brand_name }} {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC)">
-                  {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC) — R$ {{ '%.2f'|format(a.group_price) }}
+                  {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC) — R$ {{ '%.0f'|format(a.group_price) }}
                 </option>
                 {% endfor %}{% if cur_brand != '' %}</optgroup>{% endif %}
               </select>
@@ -36,7 +36,7 @@
             <div class="col-md-2"><input type="number" id="priceInput" class="form-control" step="0.01" placeholder="Preço"></div>
             <div class="col-md-1"><button type="button" class="btn btn-primary w-100" onclick="addItem()"><i class="bi bi-plus-lg"></i></button></div>
           </div>
-          <div class="form-text">ML permitido: {{ min_ml|int }} a {{ max_ml|int }}. Frasquinho de R$ {{ '%.2f'|format(vial_cost_group) }} já incluído no preço do decant.</div>
+          <div class="form-text">ML permitido: {{ min_ml|int }} a {{ max_ml|int }}. Frasquinho de R$ {{ '%.0f'|format(vial_cost_group) }} já incluído no preço do decant.</div>
         </div>
       </div>
       <div class="card">
@@ -97,9 +97,9 @@ function recalcPrice() {
   if (!opt.value) return;
   if (opt.dataset.type === 'decant') {
     const ml = parseFloat(document.getElementById('mlInput').value) || 0;
-    document.getElementById('priceInput').value = ((parseFloat(opt.dataset.pricePerMl)||0) * ml + vialCostGroup).toFixed(2);
+    document.getElementById('priceInput').value = Math.round((parseFloat(opt.dataset.pricePerMl)||0) * ml + vialCostGroup);
   } else {
-    document.getElementById('priceInput').value = parseFloat(opt.dataset.price).toFixed(2);
+    document.getElementById('priceInput').value = Math.round(parseFloat(opt.dataset.price));
   }
 }
 document.getElementById('decantSelect').addEventListener('change', function() {
@@ -115,7 +115,7 @@ function addItem() {
   const opt = sel.options[sel.selectedIndex];
   if (!opt.value) return;
   const qty = parseInt(document.getElementById('qtyInput').value) || 1;
-  const price = parseFloat(document.getElementById('priceInput').value) || 0;
+  const price = Math.round(parseFloat(document.getElementById('priceInput').value) || 0);
   const type = opt.dataset.type, id = parseInt(opt.dataset.id);
   let ml = null, name = opt.dataset.name, key = type + '-' + id;
   if (type === 'decant') {

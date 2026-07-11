@@ -293,6 +293,8 @@ def migrate_db():
             db.execute(stmt)
         except sqlite3.OperationalError:
             pass
+    # preço final sempre redondo, sem centavos (arredonda o que já estava salvo com decimais)
+    db.execute("UPDATE apc_products SET group_price = ROUND(group_price) WHERE group_price > 0")
     db.commit(); db.close()
 
 # Run on module load so gunicorn workers also initialize the DB
@@ -580,11 +582,13 @@ def _recalculate_group_prices(perfume_id, volume_ml, cost_price):
     if not denom:
         return False  # configuração de custos/margem inválida (soma >= 100%) — não recalcula
     cost_per_ml = cost_price / volume_ml
+    # price_per_ml mantém precisão decimal internamente (é uma taxa, não um preço final) —
+    # o arredondamento pra número redondo acontece no preço FINAL cobrado (na venda / no APC).
     price_per_ml = round(cost_per_ml / denom, 4)
     execute_db("UPDATE perfumes SET price_per_ml=? WHERE id=?", (price_per_ml, perfume_id))
     for a in query_db("SELECT * FROM apc_products WHERE perfume_id=? AND active=1", (perfume_id,)):
         direct_cost = cost_per_ml * a['size_ml']
-        group_price = round(direct_cost / denom, 2)
+        group_price = round(direct_cost / denom)  # preço final do APC — sempre redondo, sem centavos
         execute_db("UPDATE apc_products SET group_price=? WHERE id=?", (group_price, a['id']))
     return True
 
@@ -773,6 +777,7 @@ def sale_new():
         if not valid_items:
             flash('Nenhum item válido (verifique a quantidade em ml).','danger')
             return redirect(request.url)
+        for i in valid_items: i['price'] = round(i['price'])  # preço sempre redondo, sem centavos
         subtotal=sum(i['qty']*i['price'] for i in valid_items)
         total=max(0,subtotal-discount)
         fee_amount=round(total*fee_pct/100, 2)
@@ -966,6 +971,7 @@ def order_new():
         if not valid_items:
             flash('Nenhum item válido (verifique a quantidade em ml).','danger')
             return redirect(request.url)
+        for i in valid_items: i['price'] = round(i['price'])  # preço sempre redondo, sem centavos
         subtotal = sum(i['qty']*i['price'] for i in valid_items)
         total = max(0, subtotal - discount)
         oid = execute_db("""INSERT INTO orders(customer_id,customer_name,subtotal,discount,total,notes,created_at,updated_at)

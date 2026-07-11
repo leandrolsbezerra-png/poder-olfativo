@@ -26,7 +26,7 @@
                   data-type="decant" data-id="{{ p.id }}"
                   data-price-per-ml="{{ p.price_per_ml }}"
                   data-name="{{ p.brand_name }} {{ p.name }}">
-                  {{ p.name }} — decant (R$ {{ '%.2f'|format(p.price_per_ml) }}/ml)
+                  {{ p.name }} — decant (R$ {{ '%.0f'|format(p.price_per_ml) }}/ml)
                 </option>
                 {% endfor %}
                 {% if cur_brand != '' %}</optgroup>{% endif %}
@@ -42,7 +42,7 @@
                   data-price="{{ a.group_price }}"
                   data-name="{{ a.brand_name }} {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC)"
                   data-size="{{ a.size_ml }}">
-                  {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC) — R$ {{ '%.2f'|format(a.group_price) }}
+                  {{ a.perfume_name }} {{ a.size_ml|int }}ml (APC) — R$ {{ '%.0f'|format(a.group_price) }}
                 </option>
                 {% endfor %}
                 {% if cur_brand != '' %}</optgroup>{% endif %}
@@ -65,7 +65,7 @@
             </div>
           </div>
           <div id="mlHint" class="form-text" style="display:none">
-            Frasquinho de R$ {{ '%.2f'|format(vial_cost_group) }} já somado ao preço.
+            Frasquinho de R$ {{ '%.0f'|format(vial_cost_group) }} já somado ao preço.
           </div>
         </div>
       </div>
@@ -190,9 +190,9 @@ function recalcPrice() {
   if (opt.dataset.type === 'decant') {
     const ml = parseFloat(document.getElementById('mlInput').value) || 0;
     const pricePerMl = parseFloat(opt.dataset.pricePerMl) || 0;
-    document.getElementById('priceInput').value = (pricePerMl * ml + vialCostGroup).toFixed(2);
+    document.getElementById('priceInput').value = Math.round(pricePerMl * ml + vialCostGroup);
   } else {
-    document.getElementById('priceInput').value = parseFloat(opt.dataset.price).toFixed(2);
+    document.getElementById('priceInput').value = Math.round(parseFloat(opt.dataset.price));
   }
 }
 
@@ -215,7 +215,7 @@ function addItem() {
   if (!opt.value) { alert('Selecione um produto.'); return; }
   const qty = parseInt(document.getElementById('qtyInput').value) || 1;
   const type = opt.dataset.type, id = parseInt(opt.dataset.id);
-  let price = parseFloat(document.getElementById('priceInput').value) || 0;
+  let price = Math.round(parseFloat(document.getElementById('priceInput').value) || 0);
   let ml = null, name = opt.dataset.name, key = type + '-' + id;
   if (type === 'decant') {
     ml = parseFloat(document.getElementById('mlInput').value) || 0;

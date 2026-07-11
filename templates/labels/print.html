@@ -168,7 +168,7 @@
             <span class="size-text">ML:</span>
             <span class="ml-blank"></span>
             {% if show_price == '1' %}
-            <span class="ml-rate">R$ {{ '%.2f'|format(p.price_per_ml) }}/ml + R$ {{ '%.2f'|format(vial_cost_group) }}</span>
+            <span class="ml-rate">R$ {{ '%.0f'|format(p.price_per_ml) }}/ml + R$ {{ '%.0f'|format(vial_cost_group) }}</span>
             {% endif %}
           </div>
         </div>

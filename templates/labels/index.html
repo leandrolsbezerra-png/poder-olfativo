@@ -52,7 +52,7 @@
               <div class="text-muted small">{{ p.brand_name }}</div>
               <div class="fw-bold small">{{ p.name }}</div>
               <div class="text-muted" style="font-size:.7rem">{{ p.concentration }}</div>
-              <div class="mt-1 text-muted" style="font-size:.7rem">R$ {{ '%.2f'|format(p.price_per_ml) }}/ml</div>
+              <div class="mt-1 text-muted" style="font-size:.7rem">R$ {{ '%.0f'|format(p.price_per_ml) }}/ml</div>
             </div>
           </div>
           {% if not p.photo_filename %}
