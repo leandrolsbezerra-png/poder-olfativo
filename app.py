@@ -515,8 +515,12 @@ def perfume_detail(id):
         LEFT JOIN suppliers s ON s.id=bt.supplier_id
         WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC""",(id,))
     vials=query_db("SELECT * FROM vial_costs ORDER BY size_ml")
+    apc_list=query_db("SELECT * FROM apc_products WHERE perfume_id=? AND active=1 ORDER BY size_ml",(id,))
+    denom, vial_cost_group, net_margin_pct, indirect_pct_total = _group_pricing_params()
     return render_template('perfumes/detail.html', perfume=perfume,
-                           decants=decants_list, bottles=bottles, vials=vials)
+                           decants=decants_list, bottles=bottles, vials=vials,
+                           apc_list=apc_list, denom=denom, vial_cost_group=vial_cost_group,
+                           net_margin_pct=net_margin_pct, indirect_pct_total=indirect_pct_total)
 
 @app.route('/perfumes/<int:id>/preco-decants', methods=['POST'])
 def perfume_update_prices(id):
@@ -554,8 +558,9 @@ def bottle_new():
             perfume_id, request.form.get('supplier_id') or None, vol, cost, vol,
             request.form.get('purchase_date') or None, request.form.get('notes','').strip()))
         flash('Frasco registrado!','success')
-        # auto-recalculate decant prices
+        # auto-recalculate decant prices (site e grupo WhatsApp)
         _recalculate_prices(perfume_id, vol, cost)
+        _recalculate_group_prices(perfume_id, vol, cost)
         return redirect(url_for('perfume_detail', id=perfume_id))
     perfumes_list=query_db("SELECT p.id,p.name,b.name brand_name FROM perfumes p LEFT JOIN brands b ON b.id=p.brand_id WHERE p.active=1 ORDER BY b.name,p.name")
     suppliers_list=query_db("SELECT * FROM suppliers WHERE active=1 ORDER BY name")
@@ -569,6 +574,38 @@ def _recalculate_prices(perfume_id, volume_ml, cost_price):
         if not v: continue
         sale_price = round((cost_per_ml * d['size_ml'] + v['cost']) * v['multiplier'], 2)
         execute_db("UPDATE decants SET sale_price=? WHERE id=?", (sale_price, d['id']))
+
+
+# ──────────────────────────── Precificação Grupo WhatsApp ────────────────────────────
+
+def _group_pricing_params():
+    """Retorna (denom, vial_cost_group, net_margin_pct, indirect_pct_total) já validados.
+    denom é None se a soma de custos indiretos + margem passar de 100% (config inválida)."""
+    settings_rows = {r['key']: r['value'] for r in query_db("SELECT * FROM group_settings")}
+    net_margin_pct = float(settings_rows.get('net_margin_pct', 40) or 0)
+    vial_cost_group = float(settings_rows.get('vial_cost_group', 0) or 0)
+    indirect_pct_total = sum(r['pct'] for r in query_db(
+        "SELECT * FROM group_indirect_costs WHERE active=1"))
+    total_pct = indirect_pct_total + net_margin_pct
+    denom = (1 - total_pct / 100) if total_pct < 100 else None
+    return denom, vial_cost_group, net_margin_pct, indirect_pct_total
+
+def _recalculate_group_prices(perfume_id, volume_ml, cost_price):
+    """Preço de grupo = custo_direto / (1 - custos_indiretos% - margem_liquida%).
+    Decant soma o custo do frasquinho; APC (frasco original) não."""
+    denom, vial_cost_group, _, _ = _group_pricing_params()
+    if not denom:
+        return False  # configuração de custos/margem inválida (soma >= 100%) — não recalcula
+    cost_per_ml = cost_price / volume_ml
+    for d in query_db("SELECT * FROM decants WHERE perfume_id=? AND active=1", (perfume_id,)):
+        direct_cost = cost_per_ml * d['size_ml'] + vial_cost_group
+        group_price = round(direct_cost / denom, 2)
+        execute_db("UPDATE decants SET group_price=? WHERE id=?", (group_price, d['id']))
+    for a in query_db("SELECT * FROM apc_products WHERE perfume_id=? AND active=1", (perfume_id,)):
+        direct_cost = cost_per_ml * a['size_ml']
+        group_price = round(direct_cost / denom, 2)
+        execute_db("UPDATE apc_products SET group_price=? WHERE id=?", (group_price, a['id']))
+    return True
 
 
 @app.route('/frascos/<int:id>/inativar', methods=['POST'])
@@ -725,8 +762,84 @@ def perfume_recalculate(id):
         sale_price=round(cost_unit*multiplier,2)
         execute_db("UPDATE decants SET sale_price=? WHERE id=?",(sale_price,d['id']))
         updated+=1
-    flash(f'Preços recalculados para {updated} tamanho(s) com base no custo atual do frasco.','success')
+    group_ok = _recalculate_group_prices(id, bottle['volume_ml'], bottle['cost_price'])
+    msg = f'Preços recalculados para {updated} tamanho(s) com base no custo atual do frasco.'
+    if not group_ok:
+        msg += ' (Preço de grupo NÃO recalculado: custos indiretos + margem somam 100% ou mais — ajuste em Configurações do Grupo.)'
+    flash(msg, 'success' if group_ok else 'warning')
     return redirect(url_for('perfume_detail', id=id))
+
+
+@app.route('/grupo/configuracoes', methods=['GET','POST'])
+def group_settings():
+    if request.method == 'POST':
+        net_margin_pct = float(request.form.get('net_margin_pct') or 0)
+        vial_cost_group = float(request.form.get('vial_cost_group') or 0)
+        execute_db("UPDATE group_settings SET value=? WHERE key='net_margin_pct'", (net_margin_pct,))
+        execute_db("UPDATE group_settings SET value=? WHERE key='vial_cost_group'", (vial_cost_group,))
+        for key, val in request.form.items():
+            if key.startswith('indirect_pct_'):
+                cost_id = int(key.split('_')[-1])
+                try: execute_db("UPDATE group_indirect_costs SET pct=? WHERE id=?", (float(val or 0), cost_id))
+                except: pass
+        # checkboxes só vêm no form quando marcados — desmarca todos, remarca os presentes
+        execute_db("UPDATE group_indirect_costs SET active=0")
+        for key in request.form:
+            if key.startswith('indirect_active_'):
+                cost_id = int(key.split('_')[-1])
+                execute_db("UPDATE group_indirect_costs SET active=1 WHERE id=?", (cost_id,))
+        flash('Configurações do grupo salvas! Vá no perfume e clique em "Recalcular tudo" para atualizar os preços.', 'success')
+        return redirect(url_for('group_settings'))
+
+    denom, vial_cost_group, net_margin_pct, indirect_pct_total = _group_pricing_params()
+    indirect_costs = query_db("SELECT * FROM group_indirect_costs ORDER BY sort_order, id")
+    total_pct = indirect_pct_total + net_margin_pct
+    return render_template('group/settings.html', indirect_costs=indirect_costs,
+                           net_margin_pct=net_margin_pct, vial_cost_group=vial_cost_group,
+                           indirect_pct_total=indirect_pct_total, total_pct=total_pct,
+                           denom=denom)
+
+@app.route('/grupo/custo-indireto/novo', methods=['POST'])
+def group_indirect_cost_new():
+    label = request.form.get('label','').strip()
+    pct = float(request.form.get('pct') or 0)
+    if label:
+        max_order = query_db("SELECT COALESCE(MAX(sort_order),0) m FROM group_indirect_costs", one=True)['m']
+        execute_db("INSERT INTO group_indirect_costs(label,pct,sort_order) VALUES(?,?,?)", (label, pct, max_order+1))
+        flash('Custo indireto adicionado!','success')
+    return redirect(url_for('group_settings'))
+
+@app.route('/grupo/custo-indireto/<int:id>/excluir', methods=['POST'])
+def group_indirect_cost_delete(id):
+    execute_db("DELETE FROM group_indirect_costs WHERE id=?", (id,))
+    flash('Custo indireto removido.','success')
+    return redirect(url_for('group_settings'))
+
+
+# ──────────────────────────── APC (Apresentação Completa) ────────────────────────────
+
+@app.route('/perfumes/<int:id>/apc/novo', methods=['POST'])
+def apc_new(id):
+    size_ml = float(request.form.get('size_ml') or 0)
+    if size_ml <= 0:
+        flash('Informe um tamanho válido.','danger')
+        return redirect(url_for('perfume_detail', id=id))
+    try:
+        execute_db("INSERT INTO apc_products(perfume_id,size_ml) VALUES(?,?)", (id, size_ml))
+    except sqlite3.IntegrityError:
+        flash('Esse tamanho de APC já existe para este perfume.','warning')
+        return redirect(url_for('perfume_detail', id=id))
+    bottle = query_db("SELECT * FROM bottles WHERE perfume_id=? AND active=1 ORDER BY id DESC", (id,), one=True)
+    if bottle:
+        _recalculate_group_prices(id, bottle['volume_ml'], bottle['cost_price'])
+    flash('APC adicionado!','success')
+    return redirect(url_for('perfume_detail', id=id))
+
+@app.route('/perfumes/<int:pid>/apc/<int:id>/excluir', methods=['POST'])
+def apc_delete(pid, id):
+    execute_db("DELETE FROM apc_products WHERE id=?", (id,))
+    flash('APC removido.','success')
+    return redirect(url_for('perfume_detail', id=pid))
 
 
 # ──────────────────────────── Sales ────────────────────────────

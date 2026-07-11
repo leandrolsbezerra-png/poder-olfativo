@@ -215,6 +215,80 @@
     </div>
   </div>
 
+  <!-- Preços do Grupo WhatsApp -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header p-3 d-flex justify-content-between align-items-center">
+        <div>
+          <span class="fw-semibold"><i class="bi bi-whatsapp text-success me-1"></i>Preços do Grupo WhatsApp</span>
+          <div class="text-muted small">Margem {{ net_margin_pct }}% + custos indiretos {{ indirect_pct_total }}%</div>
+        </div>
+        <a href="{{ url_for('group_settings') }}" class="btn btn-sm btn-outline-secondary py-1"><i class="bi bi-gear"></i></a>
+      </div>
+      <div class="card-body">
+        {% if not bottles %}
+        <div class="alert alert-warning py-2 small mb-0">Cadastre um frasco original para calcular os preços.</div>
+        {% elif not denom %}
+        <div class="alert alert-danger py-2 small mb-0">
+          Custos indiretos + margem somam 100% ou mais. <a href="{{ url_for('group_settings') }}">Ajuste aqui</a> antes de recalcular.
+        </div>
+        {% else %}
+        {% set cost_per_ml = bottles[0].cost_price / bottles[0].volume_ml %}
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Tamanho</th><th>Custo direto</th><th>Preço de grupo</th></tr></thead>
+          <tbody>
+          {% for d in decants %}
+          {% set direct_cost = cost_per_ml * d.size_ml + vial_cost_group %}
+          <tr>
+            <td><span class="ml-badge">{{ d.size_ml|int }}ml</span></td>
+            <td class="text-muted small">R$ {{ '%.2f'|format(direct_cost) }}</td>
+            <td class="fw-bold text-success">R$ {{ '%.2f'|format(d.group_price) }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="text-muted small mt-2">Clique em <strong>Recalcular tudo</strong> (acima) para atualizar após mudar o custo do frasco ou as configurações do grupo.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- APC — Apresentação Completa -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header p-3">
+        <span class="fw-semibold"><i class="bi bi-box-seam me-1"></i>APC — Apresentação Completa</span>
+        <div class="text-muted small">Frasco e embalagem originais, sem custo de frasquinho.</div>
+      </div>
+      <div class="card-body">
+        {% if apc_list %}
+        <table class="table table-sm mb-3">
+          <thead><tr><th>Tamanho</th><th>Preço de grupo</th><th></th></tr></thead>
+          <tbody>
+          {% for a in apc_list %}
+          <tr>
+            <td><span class="ml-badge">{{ a.size_ml|int }}ml</span></td>
+            <td class="fw-bold text-success">R$ {{ '%.2f'|format(a.group_price) }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('apc_delete', pid=perfume.id, id=a.id) }}" onsubmit="return confirm('Remover este APC?')">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-muted small mb-3">Nenhum APC cadastrado ainda.</div>
+        {% endif %}
+        <form method="post" action="{{ url_for('apc_new', id=perfume.id) }}" class="d-flex gap-2">
+          <input type="number" step="1" min="1" name="size_ml" class="form-control form-control-sm" placeholder="Tamanho em ml (ex: 30)" required>
+          <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap"><i class="bi bi-plus-lg me-1"></i>Adicionar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
