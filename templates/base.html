@@ -184,6 +184,14 @@
       <i class="bi bi-tag"></i> Etiquetas
     </a>
 
+    <div class="nav-section">Financeiro</div>
+    <a href="{{ url_for('payables') }}" class="{{ 'active' if 'payable' in request.endpoint }}" onclick="closeSidebar()">
+      <i class="bi bi-arrow-up-circle"></i> Contas a Pagar
+    </a>
+    <a href="{{ url_for('receivables') }}" class="{{ 'active' if 'receivable' in request.endpoint }}" onclick="closeSidebar()">
+      <i class="bi bi-arrow-down-circle"></i> Contas a Receber
+    </a>
+
     <div class="nav-section">Análise</div>
     <a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint=='reports' }}" onclick="closeSidebar()">
       <i class="bi bi-bar-chart-line"></i> Relatórios

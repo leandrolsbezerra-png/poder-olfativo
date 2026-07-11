@@ -206,8 +206,87 @@ def init_db():
     db.commit(); db.close()
     init_db_done = True
 
+
+def migrate_db():
+    """Roda sempre (mesmo em banco já existente). Idempotente: só cria o que faltar.
+    É aqui que entram tabelas/colunas novas adicionadas depois do lançamento inicial."""
+    db = sqlite3.connect(DATABASE)
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS accounts_payable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            description TEXT NOT NULL,
+            category TEXT DEFAULT '',
+            supplier_id INTEGER REFERENCES suppliers(id),
+            amount REAL NOT NULL,
+            due_date TEXT NOT NULL,
+            paid_date TEXT,
+            paid_amount REAL,
+            status TEXT DEFAULT 'pendente',
+            payment_method TEXT DEFAULT '',
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE IF NOT EXISTS accounts_receivable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            description TEXT NOT NULL,
+            category TEXT DEFAULT '',
+            customer_id INTEGER REFERENCES customers(id),
+            sale_id INTEGER REFERENCES sales(id),
+            amount REAL NOT NULL,
+            due_date TEXT NOT NULL,
+            received_date TEXT,
+            received_amount REAL,
+            status TEXT DEFAULT 'pendente',
+            payment_method TEXT DEFAULT '',
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE IF NOT EXISTS group_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+        CREATE TABLE IF NOT EXISTS group_indirect_costs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT NOT NULL,
+            pct REAL NOT NULL DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            sort_order INTEGER DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS apc_products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            perfume_id INTEGER REFERENCES perfumes(id),
+            size_ml REAL NOT NULL,
+            group_price REAL DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            UNIQUE(perfume_id, size_ml)
+        );
+    """)
+    # valores padrão só na primeira vez (tabela vazia)
+    if not db.execute("SELECT 1 FROM group_settings WHERE key='net_margin_pct'").fetchone():
+        db.execute("INSERT INTO group_settings(key,value) VALUES('net_margin_pct','40')")
+    if not db.execute("SELECT 1 FROM group_settings WHERE key='vial_cost_group'").fetchone():
+        db.execute("INSERT INTO group_settings(key,value) VALUES('vial_cost_group','6')")
+    if not db.execute("SELECT 1 FROM group_indirect_costs").fetchone():
+        db.executemany("INSERT INTO group_indirect_costs(label,pct,sort_order) VALUES(?,?,?)", [
+            ('Maquininha de cartão', 5.0, 1),
+            ('Influenciador', 0.0, 2),
+            ('Gestor do grupo', 0.0, 3),
+            ('Outros custos', 0.0, 4),
+        ])
+    # colunas novas em tabelas já existentes (ALTER falha se a coluna já existe — ignoramos)
+    for stmt in [
+        "ALTER TABLE decants ADD COLUMN group_price REAL DEFAULT 0",
+        "ALTER TABLE decants ADD COLUMN group_active INTEGER DEFAULT 1",
+    ]:
+        try:
+            db.execute(stmt)
+        except sqlite3.OperationalError:
+            pass
+    db.commit(); db.close()
+
 # Run on module load so gunicorn workers also initialize the DB
 init_db()
+migrate_db()
 
 # ──────────────────────────── Auth ────────────────────────────
 
@@ -1213,6 +1292,210 @@ def _sync_vial_costs():
     size_costs = _compute_size_costs()
     for size_ml, total_cost in size_costs.items():
         execute_db("UPDATE vial_costs SET cost=? WHERE size_ml=?", (round(total_cost, 4), size_ml))
+
+
+# ──────────────────────────── Contas a Pagar ────────────────────────────
+
+import datetime as _dt
+
+def _payable_status(row):
+    if row['status'] == 'pago':
+        return 'pago'
+    if row['due_date'] < _dt.date.today().isoformat():
+        return 'atrasado'
+    return 'pendente'
+
+@app.route('/contas-pagar')
+def payables():
+    status_filter = request.args.get('status', '')
+    rows = query_db("""SELECT ap.*, s.name supplier_name FROM accounts_payable ap
+        LEFT JOIN suppliers s ON s.id=ap.supplier_id ORDER BY ap.due_date""")
+    rows = [dict(r, computed_status=_payable_status(r)) for r in rows]
+    if status_filter:
+        rows = [r for r in rows if r['computed_status'] == status_filter]
+    open_rows = [r for r in rows if r['computed_status'] != 'pago']
+    summary = {
+        'total_aberto': sum(r['amount'] for r in open_rows),
+        'total_atrasado': sum(r['amount'] for r in open_rows if r['computed_status'] == 'atrasado'),
+        'qtd_aberto': len(open_rows),
+    }
+    suppliers_list = query_db("SELECT * FROM suppliers ORDER BY name")
+    return render_template('payable/index.html', rows=rows, summary=summary,
+                           status_filter=status_filter, suppliers=suppliers_list,
+                           today=_dt.date.today().isoformat())
+
+@app.route('/contas-pagar/novo', methods=['GET','POST'])
+def payable_new():
+    if request.method == 'POST':
+        return _save_payable(None)
+    suppliers_list = query_db("SELECT * FROM suppliers ORDER BY name")
+    return render_template('payable/form.html', row=None, suppliers=suppliers_list)
+
+@app.route('/contas-pagar/<int:id>/editar', methods=['GET','POST'])
+def payable_edit(id):
+    row = query_db("SELECT * FROM accounts_payable WHERE id=?", (id,), one=True)
+    if not row:
+        flash('Conta não encontrada.','danger'); return redirect(url_for('payables'))
+    if request.method == 'POST':
+        return _save_payable(id)
+    suppliers_list = query_db("SELECT * FROM suppliers ORDER BY name")
+    return render_template('payable/form.html', row=row, suppliers=suppliers_list)
+
+def _save_payable(id):
+    f = request.form
+    description = f.get('description','').strip()
+    due_date = f.get('due_date','').strip()
+    if not description or not due_date:
+        flash('Descrição e vencimento são obrigatórios.','danger')
+        return redirect(request.url)
+    try:
+        amount = float(f.get('amount') or 0)
+    except ValueError:
+        amount = 0
+    data = {
+        'description': description,
+        'category': f.get('category','').strip(),
+        'supplier_id': int(f['supplier_id']) if f.get('supplier_id') else None,
+        'amount': amount,
+        'due_date': due_date,
+        'notes': f.get('notes','').strip(),
+    }
+    if id is None:
+        execute_db("""INSERT INTO accounts_payable(description,category,supplier_id,amount,due_date,notes)
+            VALUES(:description,:category,:supplier_id,:amount,:due_date,:notes)""", data)
+        flash('Conta a pagar cadastrada!','success')
+    else:
+        data['id'] = id
+        execute_db("""UPDATE accounts_payable SET description=:description,category=:category,
+            supplier_id=:supplier_id,amount=:amount,due_date=:due_date,notes=:notes WHERE id=:id""", data)
+        flash('Conta a pagar atualizada!','success')
+    return redirect(url_for('payables'))
+
+@app.route('/contas-pagar/<int:id>/pagar', methods=['POST'])
+def payable_pay(id):
+    row = query_db("SELECT * FROM accounts_payable WHERE id=?", (id,), one=True)
+    if not row:
+        flash('Conta não encontrada.','danger'); return redirect(url_for('payables'))
+    paid_amount = float(request.form.get('paid_amount') or row['amount'])
+    paid_date = request.form.get('paid_date') or _dt.date.today().isoformat()
+    payment_method = request.form.get('payment_method','')
+    execute_db("""UPDATE accounts_payable SET status='pago', paid_date=?, paid_amount=?,
+        payment_method=? WHERE id=?""", (paid_date, paid_amount, payment_method, id))
+    flash('Conta marcada como paga!','success')
+    return redirect(url_for('payables'))
+
+@app.route('/contas-pagar/<int:id>/reabrir', methods=['POST'])
+def payable_reopen(id):
+    execute_db("UPDATE accounts_payable SET status='pendente', paid_date=NULL, paid_amount=NULL WHERE id=?", (id,))
+    flash('Conta reaberta.','success')
+    return redirect(url_for('payables'))
+
+@app.route('/contas-pagar/<int:id>/excluir', methods=['POST'])
+def payable_delete(id):
+    execute_db("DELETE FROM accounts_payable WHERE id=?", (id,))
+    flash('Conta a pagar removida.','success')
+    return redirect(url_for('payables'))
+
+
+# ──────────────────────────── Contas a Receber ────────────────────────────
+
+def _receivable_status(row):
+    if row['status'] == 'recebido':
+        return 'recebido'
+    if row['due_date'] < _dt.date.today().isoformat():
+        return 'atrasado'
+    return 'pendente'
+
+@app.route('/contas-receber')
+def receivables():
+    status_filter = request.args.get('status', '')
+    rows = query_db("""SELECT ar.*, c.name customer_name_ref FROM accounts_receivable ar
+        LEFT JOIN customers c ON c.id=ar.customer_id ORDER BY ar.due_date""")
+    rows = [dict(r, computed_status=_receivable_status(r)) for r in rows]
+    if status_filter:
+        rows = [r for r in rows if r['computed_status'] == status_filter]
+    open_rows = [r for r in rows if r['computed_status'] != 'recebido']
+    summary = {
+        'total_aberto': sum(r['amount'] for r in open_rows),
+        'total_atrasado': sum(r['amount'] for r in open_rows if r['computed_status'] == 'atrasado'),
+        'qtd_aberto': len(open_rows),
+    }
+    customers_list = query_db("SELECT * FROM customers WHERE active=1 ORDER BY name")
+    return render_template('receivable/index.html', rows=rows, summary=summary,
+                           status_filter=status_filter, customers=customers_list,
+                           today=_dt.date.today().isoformat())
+
+@app.route('/contas-receber/novo', methods=['GET','POST'])
+def receivable_new():
+    if request.method == 'POST':
+        return _save_receivable(None)
+    customers_list = query_db("SELECT * FROM customers WHERE active=1 ORDER BY name")
+    return render_template('receivable/form.html', row=None, customers=customers_list)
+
+@app.route('/contas-receber/<int:id>/editar', methods=['GET','POST'])
+def receivable_edit(id):
+    row = query_db("SELECT * FROM accounts_receivable WHERE id=?", (id,), one=True)
+    if not row:
+        flash('Conta não encontrada.','danger'); return redirect(url_for('receivables'))
+    if request.method == 'POST':
+        return _save_receivable(id)
+    customers_list = query_db("SELECT * FROM customers WHERE active=1 ORDER BY name")
+    return render_template('receivable/form.html', row=row, customers=customers_list)
+
+def _save_receivable(id):
+    f = request.form
+    description = f.get('description','').strip()
+    due_date = f.get('due_date','').strip()
+    if not description or not due_date:
+        flash('Descrição e vencimento são obrigatórios.','danger')
+        return redirect(request.url)
+    try:
+        amount = float(f.get('amount') or 0)
+    except ValueError:
+        amount = 0
+    data = {
+        'description': description,
+        'category': f.get('category','').strip(),
+        'customer_id': int(f['customer_id']) if f.get('customer_id') else None,
+        'amount': amount,
+        'due_date': due_date,
+        'notes': f.get('notes','').strip(),
+    }
+    if id is None:
+        execute_db("""INSERT INTO accounts_receivable(description,category,customer_id,amount,due_date,notes)
+            VALUES(:description,:category,:customer_id,:amount,:due_date,:notes)""", data)
+        flash('Conta a receber cadastrada!','success')
+    else:
+        data['id'] = id
+        execute_db("""UPDATE accounts_receivable SET description=:description,category=:category,
+            customer_id=:customer_id,amount=:amount,due_date=:due_date,notes=:notes WHERE id=:id""", data)
+        flash('Conta a receber atualizada!','success')
+    return redirect(url_for('receivables'))
+
+@app.route('/contas-receber/<int:id>/receber', methods=['POST'])
+def receivable_receive(id):
+    row = query_db("SELECT * FROM accounts_receivable WHERE id=?", (id,), one=True)
+    if not row:
+        flash('Conta não encontrada.','danger'); return redirect(url_for('receivables'))
+    received_amount = float(request.form.get('received_amount') or row['amount'])
+    received_date = request.form.get('received_date') or _dt.date.today().isoformat()
+    payment_method = request.form.get('payment_method','')
+    execute_db("""UPDATE accounts_receivable SET status='recebido', received_date=?, received_amount=?,
+        payment_method=? WHERE id=?""", (received_date, received_amount, payment_method, id))
+    flash('Conta marcada como recebida!','success')
+    return redirect(url_for('receivables'))
+
+@app.route('/contas-receber/<int:id>/reabrir', methods=['POST'])
+def receivable_reopen(id):
+    execute_db("UPDATE accounts_receivable SET status='pendente', received_date=NULL, received_amount=NULL WHERE id=?", (id,))
+    flash('Conta reaberta.','success')
+    return redirect(url_for('receivables'))
+
+@app.route('/contas-receber/<int:id>/excluir', methods=['POST'])
+def receivable_delete(id):
+    execute_db("DELETE FROM accounts_receivable WHERE id=?", (id,))
+    flash('Conta a receber removida.','success')
+    return redirect(url_for('receivables'))
 
 
 # ──────────────────────────── API ────────────────────────────
