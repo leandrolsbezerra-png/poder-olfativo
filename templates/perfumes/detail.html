@@ -108,7 +108,8 @@
             {% else %}
             <div class="text-center p-3 mb-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
               <div class="text-muted small mb-1">Preço por ml</div>
-              <div class="fs-3 fw-bold text-success">R$ {{ '%.0f'|format(perfume.price_per_ml) }}</div>
+              <div class="fs-3 fw-bold text-success">R$ {{ '%.2f'|format(perfume.price_per_ml)|replace('.',',') }}</div>
+              <div class="text-muted small">(taxa por ml — os preços finais abaixo são arredondados)</div>
               <div class="text-muted small mt-1">+ R$ {{ '%.0f'|format(vial_cost_group) }} de frasquinho por decant (cobrado à parte na venda)</div>
               <div class="text-muted small">Cliente escolhe de {{ min_ml|int }}ml a {{ max_ml|int }}ml</div>
             </div>
