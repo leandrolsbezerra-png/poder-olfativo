@@ -7,6 +7,73 @@
 {% endblock %}
 {% block content %}
 
+<!-- Mini dashboard de vendas -->
+<div class="card mb-3">
+  <div class="card-header p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span class="fw-semibold"><i class="bi bi-graph-up me-1 text-muted"></i>Vendas no período</span>
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+      <input type="date" name="sale_from" class="form-control form-control-sm" style="max-width:150px" value="{{ sale_from }}">
+      <span class="text-muted small">até</span>
+      <input type="date" name="sale_to" class="form-control form-control-sm" style="max-width:150px" value="{{ sale_to }}">
+      <button class="btn btn-sm btn-outline-primary">Filtrar</button>
+    </form>
+  </div>
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a href="{{ url_for('orders', sale_from=now_iso, sale_to=now_iso) }}" class="btn btn-sm btn-outline-secondary">Hoje</a>
+      <a href="{{ url_for('orders', sale_from=week_ago_iso, sale_to=now_iso) }}" class="btn btn-sm btn-outline-secondary">7 dias</a>
+      <a href="{{ url_for('orders', sale_from=month_start_iso, sale_to=now_iso) }}" class="btn btn-sm btn-outline-secondary">Este mês</a>
+      <a href="{{ url_for('orders', sale_from=year_start_iso, sale_to=now_iso) }}" class="btn btn-sm btn-outline-secondary">Este ano</a>
+      <a href="{{ url_for('orders', sale_from='2000-01-01', sale_to=now_iso) }}" class="btn btn-sm btn-outline-secondary">Tudo</a>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3">
+        <div class="p-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
+          <div class="text-muted small">Qtd. de vendas</div>
+          <div class="fs-4 fw-bold">{{ sales_summary.qty }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="p-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
+          <div class="text-muted small">Faturado no período</div>
+          <div class="fs-4 fw-bold text-success">R$ {{ '%.2f'|format(sales_summary.revenue) }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="p-3 rounded" style="background:#faf8f5;border:1px solid #e8e2d9">
+          <div class="text-muted small">Ticket médio</div>
+          <div class="fs-4 fw-bold">R$ {{ '%.2f'|format(sales_summary.revenue / sales_summary.qty) if sales_summary.qty else '0,00' }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 d-flex align-items-center justify-content-center">
+        <a href="{{ url_for('export_sales_csv') }}?from={{ sale_from }}&to={{ sale_to }}" class="btn btn-sm btn-outline-secondary w-100">
+          <i class="bi bi-download me-1"></i>Exportar vendas (CSV)
+        </a>
+      </div>
+    </div>
+    {% if recent_period_sales %}
+    <table class="table table-sm mb-0">
+      <thead><tr><th>#</th><th>Cliente</th><th>Pagamento</th><th class="text-end">Total</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for s in recent_period_sales %}
+      <tr>
+        <td><a href="{{ url_for('sale_detail', id=s.id) }}" class="text-decoration-none">#{{ s.id }}</a></td>
+        <td>{{ s.customer_name }}</td>
+        <td class="small">{{ s.payment_method }}</td>
+        <td class="text-end fw-semibold">R$ {{ '%.2f'|format(s.total) }}</td>
+        <td>{% if s.status == 'cancelada' %}<span class="badge bg-danger">Cancelada</span>{% else %}<span class="badge bg-success">Concluída</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center text-muted py-3 small">Nenhuma venda nesse período.</div>
+    {% endif %}
+  </div>
+</div>
+
 <!-- Status tabs -->
 <div class="d-flex gap-2 mb-3 flex-wrap">
   <a href="{{ url_for('orders') }}" class="btn btn-sm {{ 'btn-dark' if not status_filter else 'btn-outline-secondary' }}">

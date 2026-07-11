@@ -936,6 +936,7 @@ STATUS_COLOR = {s[0]: s[2] for s in ORDER_STATUSES}
 
 @app.route('/pedidos')
 def orders():
+    import datetime
     status_filter = request.args.get('status','')
     q = request.args.get('q','')
     sql = "SELECT * FROM orders WHERE 1=1"
@@ -946,10 +947,30 @@ def orders():
     rows = query_db(sql, params)
     counts = {r['status']: r['c'] for r in query_db(
         "SELECT status, COUNT(*) c FROM orders GROUP BY status")}
+
+    # Mini dashboard de vendas (tabela sales), filtrável por período — padrão: mês atual
+    today = datetime.date.today()
+    default_from = today.replace(day=1).isoformat()
+    default_to = today.isoformat()
+    sale_from = request.args.get('sale_from', default_from)
+    sale_to = request.args.get('sale_to', default_to)
+    sales_summary = query_db("""SELECT COUNT(*) qty, COALESCE(SUM(total),0) revenue
+        FROM sales WHERE status!='cancelada' AND date(sale_date)>=? AND date(sale_date)<=?""",
+        (sale_from, sale_to), one=True)
+    recent_period_sales = query_db("""SELECT id,customer_name,total,payment_method,sale_date,status
+        FROM sales WHERE date(sale_date)>=? AND date(sale_date)<=? ORDER BY id DESC LIMIT 10""",
+        (sale_from, sale_to))
+
     return render_template('orders/index.html', orders=rows, counts=counts,
                            status_filter=status_filter, q=q,
                            STATUS_LABEL=STATUS_LABEL, STATUS_COLOR=STATUS_COLOR,
-                           ORDER_STATUSES=ORDER_STATUSES)
+                           ORDER_STATUSES=ORDER_STATUSES,
+                           sale_from=sale_from, sale_to=sale_to,
+                           sales_summary=sales_summary, recent_period_sales=recent_period_sales,
+                           now_iso=today.isoformat(),
+                           week_ago_iso=(today - datetime.timedelta(days=7)).isoformat(),
+                           month_start_iso=today.replace(day=1).isoformat(),
+                           year_start_iso=today.replace(month=1, day=1).isoformat())
 
 @app.route('/pedidos/novo', methods=['GET','POST'])
 def order_new():
