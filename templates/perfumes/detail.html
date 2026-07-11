@@ -146,33 +146,24 @@
         <div class="card h-100">
           <div class="card-header p-3">
             <span class="fw-semibold"><i class="bi bi-box-seam me-1"></i>APC — Apresentação Completa</span>
-            <div class="text-muted small">Frasco e embalagem originais, sem custo de frasquinho.</div>
+            <div class="text-muted small">Frasco e embalagem originais, sem custo de frasquinho. Tamanho sempre = metade do frasco ativo (automático).</div>
           </div>
           <div class="card-body">
             {% if apc_list %}
-            <table class="table table-sm mb-3">
-              <thead><tr><th>Tamanho</th><th>Preço de grupo</th><th></th></tr></thead>
+            <table class="table table-sm mb-0">
+              <thead><tr><th>Tamanho</th><th>Preço de grupo</th></tr></thead>
               <tbody>
               {% for a in apc_list %}
               <tr>
                 <td><span class="ml-badge">{{ a.size_ml|int }}ml</span></td>
                 <td class="fw-bold text-success">R$ {{ '%.0f'|format(a.group_price) }}</td>
-                <td class="text-end">
-                  <form method="post" action="{{ url_for('apc_delete', pid=perfume.id, id=a.id) }}" onsubmit="return confirm('Remover este APC?')">
-                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                  </form>
-                </td>
               </tr>
               {% endfor %}
               </tbody>
             </table>
             {% else %}
-            <div class="text-muted small mb-3">Nenhum APC cadastrado ainda.</div>
+            <div class="text-muted small mb-0">Cadastre um frasco para o APC ser calculado automaticamente.</div>
             {% endif %}
-            <form method="post" action="{{ url_for('apc_new', id=perfume.id) }}" class="d-flex gap-2">
-              <input type="number" step="1" min="1" name="size_ml" class="form-control form-control-sm" placeholder="Tamanho em ml (ex: 30)" required>
-              <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap"><i class="bi bi-plus-lg me-1"></i>Adicionar</button>
-            </form>
           </div>
         </div>
       </div>

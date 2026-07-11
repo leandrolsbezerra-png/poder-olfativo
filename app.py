@@ -303,6 +303,8 @@ def migrate_db():
             pass
     # preço final sempre redondo, sem centavos (arredonda o que já estava salvo com decimais)
     db.execute("UPDATE apc_products SET group_price = ROUND(group_price) WHERE group_price > 0")
+    # status antigos (producao/pronto) viram 'preparado' no novo fluxo pendente->pago->preparado->enviado->entregue
+    db.execute("UPDATE orders SET status='preparado' WHERE status IN ('producao','pronto')")
     db.commit(); db.close()
 
 # Run on module load so gunicorn workers also initialize the DB
@@ -600,10 +602,16 @@ def _recalculate_group_prices(perfume_id, volume_ml, cost_price):
     # o arredondamento pra número redondo acontece no preço FINAL cobrado (na venda / no APC).
     price_per_ml = round(cost_per_ml / denom, 4)
     execute_db("UPDATE perfumes SET price_per_ml=? WHERE id=?", (price_per_ml, perfume_id))
-    for a in query_db("SELECT * FROM apc_products WHERE perfume_id=? AND active=1", (perfume_id,)):
-        direct_cost = cost_per_ml * a['size_ml']
-        group_price = round(direct_cost / denom)  # preço final do APC — sempre redondo, sem centavos
-        execute_db("UPDATE apc_products SET group_price=? WHERE id=?", (group_price, a['id']))
+
+    # APC = sempre metade do volume do frasco atual (automático, não editável)
+    apc_size = round(volume_ml / 2, 2)
+    apc_price = round((cost_per_ml * apc_size) / denom)  # preço final — sempre redondo, sem centavos
+    existing = query_db("SELECT id FROM apc_products WHERE perfume_id=? AND size_ml=?", (perfume_id, apc_size), one=True)
+    if existing:
+        execute_db("UPDATE apc_products SET group_price=?, active=1 WHERE id=?", (apc_price, existing['id']))
+    else:
+        execute_db("INSERT INTO apc_products(perfume_id,size_ml,group_price,active) VALUES(?,?,?,1)", (perfume_id, apc_size, apc_price))
+    execute_db("UPDATE apc_products SET active=0 WHERE perfume_id=? AND size_ml!=?", (perfume_id, apc_size))
     return True
 
 
@@ -731,29 +739,8 @@ def group_indirect_cost_delete(id):
 
 
 # ──────────────────────────── APC (Apresentação Completa) ────────────────────────────
-
-@app.route('/perfumes/<int:id>/apc/novo', methods=['POST'])
-def apc_new(id):
-    size_ml = float(request.form.get('size_ml') or 0)
-    if size_ml <= 0:
-        flash('Informe um tamanho válido.','danger')
-        return redirect(url_for('perfume_detail', id=id))
-    try:
-        execute_db("INSERT INTO apc_products(perfume_id,size_ml) VALUES(?,?)", (id, size_ml))
-    except sqlite3.IntegrityError:
-        flash('Esse tamanho de APC já existe para este perfume.','warning')
-        return redirect(url_for('perfume_detail', id=id))
-    bottle = query_db("SELECT * FROM bottles WHERE perfume_id=? AND active=1 ORDER BY id DESC", (id,), one=True)
-    if bottle:
-        _recalculate_group_prices(id, bottle['volume_ml'], bottle['cost_price'])
-    flash('APC adicionado!','success')
-    return redirect(url_for('perfume_detail', id=id))
-
-@app.route('/perfumes/<int:pid>/apc/<int:id>/excluir', methods=['POST'])
-def apc_delete(pid, id):
-    execute_db("DELETE FROM apc_products WHERE id=?", (id,))
-    flash('APC removido.','success')
-    return redirect(url_for('perfume_detail', id=pid))
+# O tamanho do APC é sempre metade do volume do frasco ativo — calculado automaticamente
+# em _recalculate_group_prices(), sem cadastro manual.
 
 
 # ──────────────────────────── Sales ────────────────────────────
@@ -939,10 +926,10 @@ def reports():
 
 ORDER_STATUSES = [
     ('pendente',  'Pendente',   'secondary'),
-    ('producao',  'Em Produção','warning'),
-    ('pronto',    'Pronto',     'info'),
+    ('pago',      'Pago',       'success'),
+    ('preparado', 'Preparado',  'info'),
     ('enviado',   'Enviado',    'primary'),
-    ('entregue',  'Entregue',   'success'),
+    ('entregue',  'Entregue',   'dark'),
     ('cancelado', 'Cancelado',  'danger'),
 ]
 STATUS_LABEL = {s[0]: s[1] for s in ORDER_STATUSES}
@@ -1048,15 +1035,77 @@ def order_detail(id):
     return render_template('orders/detail.html', order=order, items=items,
                            STATUS_LABEL=STATUS_LABEL, STATUS_COLOR=STATUS_COLOR, ORDER_STATUSES=ORDER_STATUSES)
 
+def _create_sale_from_order(order, items, payment, fee_pct):
+    """Cria a venda (sales+sale_items) a partir de um pedido, descontando o estoque do frasco.
+    Retorna (sale_id, warnings)."""
+    fee_amount = round(order['total']*fee_pct/100, 2)
+    sale_id = execute_db("""INSERT INTO sales(customer_id,customer_name,subtotal,discount,total,
+        payment_method,payment_fee_pct,payment_fee_amount,notes)
+        VALUES(?,?,?,?,?,?,?,?,?)""",
+        (order['customer_id'],order['customer_name'],order['subtotal'],order['discount'],
+         order['total'],payment,fee_pct,fee_amount,f"Convertido do Pedido #{order['id']}"))
+    _, vial_cost_group, *_ = _group_pricing_params()
+    warnings = []
+    for i in items:
+        if i['apc_id']:
+            a = query_db("SELECT * FROM apc_products WHERE id=?", (i['apc_id'],), one=True)
+            bottle = query_db("""SELECT bt.id,bt.cost_price,bt.volume_ml,bt.remaining_ml FROM bottles bt
+                WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC LIMIT 1""",
+                (a['perfume_id'] if a else None,), one=True)
+            ml_needed = i['size_ml']*i['quantity']
+            if bottle and bottle['remaining_ml']>=ml_needed:
+                cost_unit = round(bottle['cost_price']/bottle['volume_ml']*i['size_ml'],4)
+                execute_db("UPDATE bottles SET remaining_ml=remaining_ml-? WHERE id=?",(ml_needed,bottle['id']))
+            else:
+                cost_unit = 0
+                warnings.append(f"Aviso: frasco sem ml suficiente para o APC {i['product_label']} — convertido mesmo assim, confira o estoque.")
+            execute_db("""INSERT INTO sale_items(sale_id,apc_id,product_label,size_ml,quantity,unit_price,cost_price,total)
+                VALUES(?,?,?,?,?,?,?,?)""",
+                (sale_id,i['apc_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total']))
+        else:
+            bottle = query_db("""SELECT bt.id,bt.cost_price,bt.volume_ml,bt.remaining_ml FROM bottles bt
+                WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC LIMIT 1""",
+                (i['perfume_id'],), one=True)
+            ml_needed = i['size_ml']*i['quantity']
+            if bottle and bottle['remaining_ml']>=ml_needed:
+                cost_unit = round(bottle['cost_price']/bottle['volume_ml']*i['size_ml']+vial_cost_group,4)
+                execute_db("UPDATE bottles SET remaining_ml=remaining_ml-? WHERE id=?",(ml_needed,bottle['id']))
+            else:
+                cost_unit = vial_cost_group
+                warnings.append(f"Aviso: frasco sem ml suficiente para {i['product_label']} — convertido mesmo assim, confira o estoque.")
+            execute_db("""INSERT INTO sale_items(sale_id,perfume_id,product_label,size_ml,quantity,unit_price,cost_price,total,vial_fee)
+                VALUES(?,?,?,?,?,?,?,?,?)""",
+                (sale_id,i['perfume_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total'],vial_cost_group))
+    return sale_id, warnings
+
+
 @app.route('/pedidos/<int:id>/status', methods=['POST'])
 def order_status(id):
     import datetime
     new_status = request.form['status']
-    order = query_db("SELECT sale_id FROM orders WHERE id=?", (id,), one=True)
-    if new_status == 'entregue' and not (order and order['sale_id']):
-        flash('Esse pedido ainda não virou venda. Use o botão "Converter em Venda" (ali embaixo, com a forma de pagamento) — é isso que registra o faturamento. Marcar "Entregue" sozinho não conta como venda.','danger')
+    order = query_db("SELECT * FROM orders WHERE id=?", (id,), one=True)
+    if not order: flash('Pedido não encontrado.','danger'); return redirect(url_for('orders'))
+
+    # só avança além de "Pago" se o pedido já tiver virado venda de verdade
+    if new_status in ('preparado','enviado','entregue') and not order['sale_id']:
+        flash('Esse pedido ainda não foi marcado como "Pago" — isso é o que registra a venda. Marque como Pago primeiro.','danger')
         return redirect(url_for('order_detail', id=id))
+
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    if new_status == 'pago':
+        if order['sale_id']:
+            flash(f"Esse pedido já foi convertido antes (Venda #{order['sale_id']}).",'warning')
+            return redirect(url_for('sale_detail', id=order['sale_id']))
+        items = query_db("SELECT * FROM order_items WHERE order_id=?", (id,))
+        payment = request.form.get('payment_method','Pix')
+        fee_pct = float(request.form.get('payment_fee_pct') or 0)
+        sale_id, warnings = _create_sale_from_order(order, items, payment, fee_pct)
+        execute_db("UPDATE orders SET status='pago',sale_id=?,updated_at=? WHERE id=?", (sale_id,now,id))
+        for w in warnings: flash(w,'warning')
+        flash(f'Pedido marcado como pago — Venda #{sale_id} registrada automaticamente!','success')
+        return redirect(url_for('order_detail', id=id))
+
     execute_db("UPDATE orders SET status=?,updated_at=? WHERE id=?", (new_status,now,id))
     if new_status == 'enviado':
         tracking = request.form.get('tracking_code','').strip()
@@ -1080,44 +1129,9 @@ def order_to_sale(id):
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     payment = request.form.get('payment_method','Pix')
     fee_pct = float(request.form.get('payment_fee_pct') or 0)
-    fee_amount = round(order['total']*fee_pct/100, 2)
-    sale_id = execute_db("""INSERT INTO sales(customer_id,customer_name,subtotal,discount,total,
-        payment_method,payment_fee_pct,payment_fee_amount,notes)
-        VALUES(?,?,?,?,?,?,?,?,?)""",
-        (order['customer_id'],order['customer_name'],order['subtotal'],order['discount'],
-         order['total'],payment,fee_pct,fee_amount,f'Convertido do Pedido #{id}'))
-    _, vial_cost_group, *_ = _group_pricing_params()
-    for i in items:
-        if i['apc_id']:
-            a = query_db("SELECT * FROM apc_products WHERE id=?", (i['apc_id'],), one=True)
-            bottle = query_db("""SELECT bt.id,bt.cost_price,bt.volume_ml,bt.remaining_ml FROM bottles bt
-                WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC LIMIT 1""",
-                (a['perfume_id'] if a else None,), one=True)
-            ml_needed = i['size_ml']*i['quantity']
-            if bottle and bottle['remaining_ml']>=ml_needed:
-                cost_unit = round(bottle['cost_price']/bottle['volume_ml']*i['size_ml'],4)
-                execute_db("UPDATE bottles SET remaining_ml=remaining_ml-? WHERE id=?",(ml_needed,bottle['id']))
-            else:
-                cost_unit = 0
-                flash(f"Aviso: frasco sem ml suficiente para o APC {i['product_label']} — convertido mesmo assim, confira o estoque.",'warning')
-            execute_db("""INSERT INTO sale_items(sale_id,apc_id,product_label,size_ml,quantity,unit_price,cost_price,total)
-                VALUES(?,?,?,?,?,?,?,?)""",
-                (sale_id,i['apc_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total']))
-        else:
-            bottle = query_db("""SELECT bt.id,bt.cost_price,bt.volume_ml,bt.remaining_ml FROM bottles bt
-                WHERE bt.perfume_id=? AND bt.active=1 ORDER BY bt.id DESC LIMIT 1""",
-                (i['perfume_id'],), one=True)
-            ml_needed = i['size_ml']*i['quantity']
-            if bottle and bottle['remaining_ml']>=ml_needed:
-                cost_unit = round(bottle['cost_price']/bottle['volume_ml']*i['size_ml']+vial_cost_group,4)
-                execute_db("UPDATE bottles SET remaining_ml=remaining_ml-? WHERE id=?",(ml_needed,bottle['id']))
-            else:
-                cost_unit = vial_cost_group
-                flash(f"Aviso: frasco sem ml suficiente para {i['product_label']} — convertido mesmo assim, confira o estoque.",'warning')
-            execute_db("""INSERT INTO sale_items(sale_id,perfume_id,product_label,size_ml,quantity,unit_price,cost_price,total,vial_fee)
-                VALUES(?,?,?,?,?,?,?,?,?)""",
-                (sale_id,i['perfume_id'],i['product_label'],i['size_ml'],i['quantity'],i['unit_price'],cost_unit,i['total'],vial_cost_group))
-    execute_db("UPDATE orders SET status='entregue',sale_id=?,updated_at=? WHERE id=?", (sale_id,now,id))
+    sale_id, warnings = _create_sale_from_order(order, items, payment, fee_pct)
+    execute_db("UPDATE orders SET status='pago',sale_id=?,updated_at=? WHERE id=?", (sale_id,now,id))
+    for w in warnings: flash(w,'warning')
     flash(f'Pedido convertido em Venda #{sale_id}!','success')
     return redirect(url_for('sale_detail', id=sale_id))
 
