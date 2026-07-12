@@ -45,7 +45,7 @@
               <label class="form-label fw-semibold">Família Olfativa</label>
               <select name="family" class="form-select">
                 <option value="">— Selecione —</option>
-                {% for fam in ['Floral','Floral Frutal','Floral Aquático','Amadeirado','Amadeirado Especiado','Oriental','Oriental Floral','Oriental Especiado','Cítrico','Aquático / Marinho','Fougère','Chypre','Couro','Gourmand','Aromático','Aldéico'] %}
+                {% for fam in ['Floral','Floral Frutal','Floral Frutado','Floral Aquático','Frutado','Amadeirado','Amadeirado Especiado','Oriental','Oriental Floral','Oriental Especiado','Cítrico','Aquático / Marinho','Fougère','Chypre','Couro','Gourmand','Aromático','Aldéico'] %}
                 <option value="{{ fam }}" {{ 'selected' if perfume and perfume.family==fam }}>{{ fam }}</option>
                 {% endfor %}
               </select>
