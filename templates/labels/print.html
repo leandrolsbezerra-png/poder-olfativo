@@ -67,8 +67,8 @@
       position:absolute;
       top:1mm;
       right:1mm;
-      width:{{ '8mm' if label_w|int >= 60 else '5mm' }};
-      height:{{ '8mm' if label_w|int >= 60 else '5mm' }};
+      width:{{ '10mm' if label_w|int >= 60 else '6mm' }};
+      height:{{ '10mm' if label_w|int >= 60 else '6mm' }};
       object-fit:contain;
       border-radius:50%;
       image-rendering:-webkit-optimize-contrast;
@@ -76,6 +76,7 @@
     }
 
     /* ── Texto do perfume ── */
+    .header-text { padding-right:11mm; }
     .brand-name  { font-size:6pt; color:#999; text-transform:uppercase; letter-spacing:0; }
     .perfume-name{ font-size:9pt; font-weight:800; color:#1a1a2e; line-height:1.15; margin:0.3mm 0; }
     .conc-family { font-size:6pt; color:#888; }
@@ -114,6 +115,7 @@
     /* ── MINI (38×21mm) ── */
     .label.mini .label-photo  { width:28%; }
     .label.mini .label-content{ padding:1mm 1.5mm 1mm 1.5mm; }
+    .label.mini .header-text  { padding-right:6.5mm; }
     .label.mini .brand-name   { font-size:4pt; }
     .label.mini .perfume-name { font-size:5.5pt; }
     .label.mini .conc-family  { font-size:4pt; }
@@ -169,7 +171,7 @@
           <img src="{{ logo_b64 }}" class="corner-logo" alt="logo">
           {% endif %}
 
-          <div>
+          <div class="header-text">
             <div class="brand-name">{{ p.brand_name }}</div>
             <div class="perfume-name">{{ p.name }}</div>
             <div class="conc-family">{{ p.concentration }}{% if p.family %} · {{ p.family }}{% endif %}</div>
