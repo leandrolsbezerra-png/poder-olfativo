@@ -86,6 +86,18 @@
     .size-text     { font-size:6.5pt; font-weight:700; color:#1a1a2e; }
     .ml-rate       { font-size:5.5pt; color:#888; }
 
+    /* ── Escala de ml pra circular a caneta (2 a 15) ── */
+    .ml-scale-wrap  { padding-top:1mm; margin-top:auto; }
+    .ml-scale-label { font-size:5.5pt; color:#888; text-align:center; margin-bottom:.6mm; }
+    .ml-scale       { display:flex; flex-wrap:wrap; gap:.7mm; justify-content:center; }
+    .ml-dot         {
+      display:flex; align-items:center; justify-content:center;
+      width:4mm; height:4mm; border-radius:50%;
+      border:0.5px solid #c9a96e;
+      font-size:5.5pt; color:#1a1a2e; line-height:1;
+      flex-shrink:0;
+    }
+
     /* ── Footer ── */
     .label-footer {
       background:#1a1a2e;
@@ -163,14 +175,27 @@
             <div class="conc-family">{{ p.concentration }}{% if p.family %} · {{ p.family }}{% endif %}</div>
           </div>
 
-          <!-- Espaço em branco para anotar o ml exato decantado (2 a {{ max_ml|int }}ml) -->
+          {% if is_mini %}
+          <!-- Mini: linha em branco para anotar o ml à mão, com o intervalo como lembrete -->
           <div class="sizes-section">
             <span class="size-text">ML:</span>
             <span class="ml-blank"></span>
+            <span class="ml-rate">({{ min_ml|int }} a {{ max_ml|int }}ml)</span>
+          </div>
+          {% else %}
+          <!-- Escala de {{ min_ml|int }} a {{ max_ml|int }}ml — circula com caneta o tamanho escolhido -->
+          <div class="ml-scale-wrap">
+            <div class="ml-scale-label">circule o ml escolhido</div>
+            <div class="ml-scale">
+              {% for n in range(min_ml|int, max_ml|int + 1) %}
+              <span class="ml-dot">{{ n }}</span>
+              {% endfor %}
+            </div>
             {% if show_price == '1' %}
-            <span class="ml-rate">R$ {{ '%.0f'|format(p.price_per_ml) }}/ml + R$ {{ '%.0f'|format(vial_cost_group) }}</span>
+            <div class="ml-rate" style="text-align:center;margin-top:.6mm">R$ {{ '%.2f'|format(p.price_per_ml)|replace('.',',') }}/ml + R$ {{ '%.0f'|format(vial_cost_group) }}</div>
             {% endif %}
           </div>
+          {% endif %}
         </div>
       </div>
 
