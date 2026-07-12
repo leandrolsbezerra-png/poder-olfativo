@@ -62,21 +62,32 @@
       position:relative;
     }
 
-    /* ── Logo canto superior direito ── */
-    .corner-logo {
+    /* ── Logo canto superior direito — quadrado azul-marinho de destaque ── */
+    .corner-logo-badge {
       position:absolute;
       top:1mm;
       right:1mm;
-      width:{{ '10mm' if label_w|int >= 60 else '6mm' }};
-      height:{{ '10mm' if label_w|int >= 60 else '6mm' }};
+      width:{{ '13mm' if label_w|int >= 60 else '8.5mm' }};
+      height:{{ '13mm' if label_w|int >= 60 else '8.5mm' }};
+      background:#1a1a2e;
+      border-radius:{{ '1.5mm' if label_w|int >= 60 else '1mm' }};
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:{{ '1mm' if label_w|int >= 60 else '.6mm' }};
+      box-sizing:border-box;
+    }
+    .corner-logo {
+      width:100%;
+      height:100%;
       object-fit:contain;
-      border-radius:50%;
+      border-radius:0.5mm;
       image-rendering:-webkit-optimize-contrast;
       image-rendering:crisp-edges;
     }
 
     /* ── Texto do perfume ── */
-    .header-text { padding-right:11mm; }
+    .header-text { padding-right:14.5mm; }
     .brand-name  { font-size:6pt; color:#999; text-transform:uppercase; letter-spacing:0; }
     .perfume-name{ font-size:9pt; font-weight:800; color:#1a1a2e; line-height:1.15; margin:0.3mm 0; }
     .conc-family { font-size:6pt; color:#888; }
@@ -115,7 +126,7 @@
     /* ── MINI (38×21mm) ── */
     .label.mini .label-photo  { width:28%; }
     .label.mini .label-content{ padding:1mm 1.5mm 1mm 1.5mm; }
-    .label.mini .header-text  { padding-right:6.5mm; }
+    .label.mini .header-text  { padding-right:9.5mm; }
     .label.mini .brand-name   { font-size:4pt; }
     .label.mini .perfume-name { font-size:5.5pt; }
     .label.mini .conc-family  { font-size:4pt; }
@@ -168,7 +179,9 @@
         <div class="label-content">
           <!-- Logo canto superior direito -->
           {% if logo_b64 %}
-          <img src="{{ logo_b64 }}" class="corner-logo" alt="logo">
+          <div class="corner-logo-badge">
+            <img src="{{ logo_b64 }}" class="corner-logo" alt="logo">
+          </div>
           {% endif %}
 
           <div class="header-text">
