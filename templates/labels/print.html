@@ -15,7 +15,7 @@
     .toolbar span { color:#c9a96e; font-weight:700; font-size:14px; }
     .info { color:#888; font-size:12px; }
     .btn-print { background:#c9a96e; border:none; padding:7px 20px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; }
-    .btn-png   { background:#22c55e; border:none; padding:7px 20px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; }
+    .btn-pdf   { background:#22c55e; border:none; padding:7px 20px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; }
     .btn-close { background:transparent; border:1px solid #444; color:#aaa; padding:7px 14px; border-radius:6px; cursor:pointer; font-size:13px; }
 
     .page { padding:10mm; padding-top:65px; }
@@ -150,11 +150,11 @@
 
 <div class="toolbar">
   <span>Poder Olfativo — Etiquetas</span>
-  <button class="btn-print" onclick="window.print()">🖨 Imprimir / PDF</button>
-  <button class="btn-png" id="btnPng" onclick="salvarPNG()">📷 Salvar PNG</button>
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
+  <button class="btn-pdf" id="btnPdf" onclick="salvarPDF()">📄 Salvar PDF</button>
   <button class="btn-close" onclick="window.close()">Fechar</button>
   <span class="info">{{ perfumes|length }} perfume(s) · {{ qty }} etiq. · {{ label_w }}×{{ label_h }}mm</span>
-  <div id="pngStatus" style="color:#aaa;font-size:12px"></div>
+  <div id="pdfStatus" style="color:#aaa;font-size:12px"></div>
 </div>
 
 <div class="page">
@@ -231,22 +231,27 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
-async function salvarPNG() {
+async function salvarPDF() {
   const labels = document.querySelectorAll('.label');
   if (!labels.length) { alert('Nenhuma etiqueta.'); return; }
-  const btn = document.getElementById('btnPng');
-  const status = document.getElementById('pngStatus');
+  const btn = document.getElementById('btnPdf');
+  const status = document.getElementById('pdfStatus');
   btn.disabled = true; btn.textContent = '⏳ Gerando...';
-  const SCALE = 8;
-  let count = 0;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const PAGE_W = 210, PAGE_H = 297, MARGIN = 8, GAP = 3;
+  const lw = parseFloat('{{ label_w }}'), lh = parseFloat('{{ label_h }}');
+  const SCALE = 4;
+
+  let x = MARGIN, y = MARGIN;
+
   for (let i = 0; i < labels.length; i++) {
-    const label = labels[i];
-    const name = label.querySelector('.perfume-name')?.textContent?.trim() || `etiqueta_${i+1}`;
-    const safe = name.replace(/[^\w\sÀ-ɏ]/g,'').trim().replace(/\s+/g,'_');
     status.textContent = `Gerando ${i+1}/${labels.length}...`;
     try {
-      const canvas = await html2canvas(label, {
+      const canvas = await html2canvas(labels[i], {
         scale: SCALE,
         useCORS: true,
         allowTaint: true,
@@ -254,16 +259,22 @@ async function salvarPNG() {
         logging: false,
         imageTimeout: 0,
       });
-      const link = document.createElement('a');
-      link.download = `PO_${safe}_{{ label_w }}x{{ label_h }}mm.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      count++;
-      await new Promise(r => setTimeout(r, 400));
+      if (x + lw > PAGE_W - MARGIN + 0.01) {
+        x = MARGIN;
+        y += lh + GAP;
+      }
+      if (y + lh > PAGE_H - MARGIN + 0.01) {
+        doc.addPage();
+        x = MARGIN; y = MARGIN;
+      }
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, lw, lh);
+      x += lw + GAP;
     } catch(e) { console.error(e); }
   }
-  btn.disabled = false; btn.textContent = '📷 Salvar PNG';
-  status.textContent = `✓ ${count} PNG(s) — {{ label_w }}×{{ label_h }}mm · 8x escala`;
+
+  doc.save(`PO_etiquetas_{{ label_w }}x{{ label_h }}mm.pdf`);
+  btn.disabled = false; btn.textContent = '📄 Salvar PDF';
+  status.textContent = `✓ ${labels.length} etiqueta(s) num PDF — {{ label_w }}×{{ label_h }}mm`;
 }
 </script>
 </body>
