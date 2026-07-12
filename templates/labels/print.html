@@ -165,7 +165,7 @@
     {% set photo_src = photo_b64.get(p.id, '') %}
     {% for _ in range(qty) %}
 
-    <div class="label {{ 'mini' if is_mini }}">
+    <div class="label {{ 'mini' if is_mini }}" data-pid="{{ p.id }}">
       <div style="display:flex;flex:1;overflow:hidden">
 
         <!-- Foto -->
@@ -241,15 +241,34 @@ async function salvarPDF() {
   btn.disabled = true; btn.textContent = '⏳ Gerando...';
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: false });
   const PAGE_W = 210, PAGE_H = 297, MARGIN = 8, GAP = 3;
   const lw = parseFloat('{{ label_w }}'), lh = parseFloat('{{ label_h }}');
-  const SCALE = 4;
+  const SCALE = 8;
 
   let x = MARGIN, y = MARGIN;
+  let lastPid = null;
+  let pageStarted = false;
 
   for (let i = 0; i < labels.length; i++) {
     status.textContent = `Gerando ${i+1}/${labels.length}...`;
+    const pid = labels[i].dataset.pid;
+
+    // Cada perfume começa numa página nova — a gráfica corta por perfume.
+    if (pid !== lastPid) {
+      if (pageStarted) doc.addPage();
+      x = MARGIN; y = MARGIN;
+      lastPid = pid;
+      pageStarted = true;
+    } else if (x + lw > PAGE_W - MARGIN + 0.01) {
+      x = MARGIN;
+      y += lh + GAP;
+    }
+    if (y + lh > PAGE_H - MARGIN + 0.01) {
+      doc.addPage();
+      x = MARGIN; y = MARGIN;
+    }
+
     try {
       const canvas = await html2canvas(labels[i], {
         scale: SCALE,
@@ -259,15 +278,7 @@ async function salvarPDF() {
         logging: false,
         imageTimeout: 0,
       });
-      if (x + lw > PAGE_W - MARGIN + 0.01) {
-        x = MARGIN;
-        y += lh + GAP;
-      }
-      if (y + lh > PAGE_H - MARGIN + 0.01) {
-        doc.addPage();
-        x = MARGIN; y = MARGIN;
-      }
-      doc.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, lw, lh);
+      doc.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', x, y, lw, lh, undefined, 'NONE');
       x += lw + GAP;
     } catch(e) { console.error(e); }
   }
