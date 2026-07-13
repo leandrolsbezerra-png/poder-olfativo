@@ -247,7 +247,7 @@ async function salvarPDF() {
   // Lotes grandes (centenas/milhares de etiquetas) em escala máxima travam o
   // navegador e geram um PDF gigante — reduz um pouco a escala nesse caso,
   // ainda bem acima dos ~300dpi que uma gráfica pede.
-  const SCALE = labels.length > 400 ? 6 : (labels.length > 120 ? 8 : 10);
+  const SCALE = labels.length > 400 ? 8 : (labels.length > 120 ? 12 : 18);
 
   let x = MARGIN, y = MARGIN;
   let lastPid = null;
@@ -310,7 +310,7 @@ async function salvarPNG() {
   // capturas, então dá pra usar escala mais alta sem travar. Acima disso
   // o ganho depende da resolução da FOTO ORIGINAL do frasco — se ela for
   // pequena, aumentar a escala só amplia o borrão, não adiciona detalhe.
-  const SCALE = unique.length > 60 ? 10 : 14;
+  const SCALE = unique.length > 60 ? 14 : 20;
   let count = 0;
   for (let i = 0; i < unique.length; i++) {
     status.textContent = `Gerando ${i+1}/${unique.length}...`;
