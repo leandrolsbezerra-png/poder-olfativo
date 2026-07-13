@@ -316,12 +316,24 @@ async function salvarPNG() {
     status.textContent = `Gerando ${i+1}/${unique.length}...`;
     const name = unique[i].dataset.pname || `etiqueta_${i+1}`;
     const safe = name.replace(/[^\w\sÀ-ɏ-]/g,'').trim().replace(/\s+/g,'_');
+    // Clona a etiqueta e adiciona a medida embaixo, fora da etiqueta em si,
+    // pra facilitar a conferência do tamanho na gráfica.
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;background:#ffffff;display:inline-block;padding:6px;';
+    const clone = unique[i].cloneNode(true);
+    clone.style.margin = '0';
+    wrapper.appendChild(clone);
+    const caption = document.createElement('div');
+    caption.textContent = '{{ label_w }} x {{ label_h }} mm';
+    caption.style.cssText = 'font-family:Arial,sans-serif;font-size:11px;color:#000;text-align:center;padding-top:5px;';
+    wrapper.appendChild(caption);
+    document.body.appendChild(wrapper);
     try {
-      const canvas = await html2canvas(unique[i], {
+      const canvas = await html2canvas(wrapper, {
         scale: SCALE,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#fffdf8',
+        backgroundColor: '#ffffff',
         logging: false,
         imageTimeout: 0,
       });
@@ -332,6 +344,7 @@ async function salvarPNG() {
       count++;
       await new Promise(r => setTimeout(r, 300));
     } catch(e) { console.error(e); }
+    finally { document.body.removeChild(wrapper); }
   }
 
   btn.disabled = false; btn.textContent = '🖼 Salvar PNG';
