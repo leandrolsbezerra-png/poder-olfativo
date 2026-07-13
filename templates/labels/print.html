@@ -20,17 +20,26 @@
     .btn-close { background:transparent; border:1px solid #444; color:#aaa; padding:7px 14px; border-radius:6px; cursor:pointer; font-size:13px; }
 
     .page { padding:10mm; padding-top:65px; }
-    /* Grid em vez de flex-wrap: o Safari tem um bug antigo em que flexbox
-       não pagina corretamente na impressão (a página fica em branco). */
-    .grid { display:grid; grid-template-columns:repeat(auto-fill, {{ label_w }}mm); gap:3mm; }
+    /* Sem display:flex/grid no CONTÊINER — tanto flexbox quanto grid têm
+       bugs conhecidos de paginação na impressão do Safari (o conteúdo
+       simplesmente some). inline-block é o modo mais antigo e confiável
+       pra layouts que se repetem e quebram linha automaticamente numa
+       página impressa. */
+    .grid { font-size:0; }
 
     /* ── Label ── */
     .label {
+      /* inline-flex: participa do fluxo normal (quebra de linha) como um
+         inline-block comum — o que importa pra paginação — mas continua
+         sendo um contêiner flex por dentro, pra empilhar foto+conteúdo
+         e o rodapé como antes. */
+      display:inline-flex;
+      flex-direction:column;
+      vertical-align:top;
+      margin:0 3mm 3mm 0;
       border:1mm solid #c9a96e;
       border-radius:3mm;
       overflow:hidden;
-      display:flex;
-      flex-direction:column;
       background:#fffdf8;
       page-break-inside:avoid;
       width: {{ label_w }}mm;
