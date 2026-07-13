@@ -244,7 +244,10 @@ async function salvarPDF() {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: false });
   const PAGE_W = 210, PAGE_H = 297, MARGIN = 8, GAP = 3;
   const lw = parseFloat('{{ label_w }}'), lh = parseFloat('{{ label_h }}');
-  const SCALE = 8;
+  // Lotes grandes (centenas/milhares de etiquetas) em escala máxima travam o
+  // navegador e geram um PDF gigante — reduz um pouco a escala nesse caso,
+  // ainda bem acima dos ~300dpi que uma gráfica pede.
+  const SCALE = labels.length > 400 ? 4 : (labels.length > 120 ? 6 : 8);
 
   let x = MARGIN, y = MARGIN;
   let lastPid = null;

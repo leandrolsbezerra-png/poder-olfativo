@@ -1192,22 +1192,17 @@ def labels_print():
         ORDER BY b.name,p.name
     """, ids)
     w, h = label_size.split('x')
-    import base64
 
-    def to_b64(path):
-        if path and os.path.exists(path):
-            with open(path, 'rb') as f:
-                ext = os.path.splitext(path)[1].lstrip('.') or 'png'
-                return f'data:image/{ext};base64,' + base64.b64encode(f.read()).decode()
-        return ''
+    # URLs estáticas em vez de base64 embutido: com muitas etiquetas
+    # (perfumes x qty), repetir a imagem inteira em base64 em cada etiqueta
+    # inflava a página a ponto de travar o navegador. Como URL, o navegador
+    # baixa a imagem uma vez só e reaproveita em todas as cópias.
+    logo_b64 = url_for('static', filename='logo.png')
 
-    logo_b64 = to_b64(os.path.join(app.root_path, 'static', 'logo.png'))
-
-    # Base64 das fotos dos perfumes para evitar CORS no html2canvas
     photo_b64 = {}
     for p in perfumes_list:
         if p['photo_filename']:
-            photo_b64[p['id']] = to_b64(os.path.join(app.root_path, 'static', 'perfume_photos', p['photo_filename']))
+            photo_b64[p['id']] = url_for('static', filename='perfume_photos/' + p['photo_filename'])
 
     return render_template('labels/print.html', perfumes=perfumes_list, qty=qty,
                            label_w=w, label_h=h, show_price=show_price, show_notes=show_notes,
