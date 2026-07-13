@@ -1205,7 +1205,7 @@ def labels_print():
     # (perfumes x qty), repetir a imagem inteira em base64 em cada etiqueta
     # inflava a página a ponto de travar o navegador. Como URL, o navegador
     # baixa a imagem uma vez só e reaproveita em todas as cópias.
-    logo_b64 = url_for('static', filename='logo.png')
+    logo_b64 = url_for('static', filename='logo_sticker.png')
 
     photo_b64 = {}
     for p in perfumes_list:
