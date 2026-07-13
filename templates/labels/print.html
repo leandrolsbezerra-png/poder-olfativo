@@ -194,11 +194,10 @@
           </div>
 
           {% if is_mini %}
-          <!-- Mini: linha em branco para anotar o ml à mão, com o intervalo como lembrete -->
+          <!-- Mini: linha em branco para anotar o ml à mão -->
           <div class="sizes-section">
             <span class="size-text">ML:</span>
             <span class="ml-blank"></span>
-            <span class="ml-rate">({{ min_ml|int }} a {{ max_ml|int }}ml)</span>
           </div>
           {% else %}
           <!-- Escala de {{ min_ml|int }} a {{ max_ml|int }}ml — circula com caneta o tamanho escolhido -->
