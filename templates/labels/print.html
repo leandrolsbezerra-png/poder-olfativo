@@ -51,6 +51,7 @@
       max-height:100%;
       object-fit:contain;
       mix-blend-mode:multiply;
+      image-rendering:-webkit-optimize-contrast;
     }
 
     /* ── Content ── */
@@ -308,7 +309,11 @@ async function salvarPNG() {
     if (!seen.has(l.dataset.pid)) { seen.add(l.dataset.pid); unique.push(l); }
   });
 
-  const SCALE = unique.length > 40 ? 6 : 8;
+  // Um PNG por perfume (não por cópia) já reduz muito a quantidade de
+  // capturas, então dá pra usar escala mais alta sem travar. Acima disso
+  // o ganho depende da resolução da FOTO ORIGINAL do frasco — se ela for
+  // pequena, aumentar a escala só amplia o borrão, não adiciona detalhe.
+  const SCALE = unique.length > 60 ? 8 : 10;
   let count = 0;
   for (let i = 0; i < unique.length; i++) {
     status.textContent = `Gerando ${i+1}/${unique.length}...`;
