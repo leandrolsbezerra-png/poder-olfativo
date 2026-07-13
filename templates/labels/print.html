@@ -22,7 +22,7 @@
     .page { padding:10mm; padding-top:65px; }
     /* Grid em vez de flex-wrap: o Safari tem um bug antigo em que flexbox
        não pagina corretamente na impressão (a página fica em branco). */
-    .grid { display:grid; grid-template-columns:repeat(auto-fill, var(--lw)); gap:3mm; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill, {{ label_w }}mm); gap:3mm; }
 
     /* ── Label ── */
     .label {
@@ -33,8 +33,8 @@
       flex-direction:column;
       background:#fffdf8;
       page-break-inside:avoid;
-      width: var(--lw);
-      height: var(--lh);
+      width: {{ label_w }}mm;
+      height: {{ label_h }}mm;
       position:relative;
     }
 
@@ -163,7 +163,7 @@
 </div>
 
 <div class="page">
-  <div class="grid" style="--lw:{{ label_w }}mm; --lh:{{ label_h }}mm">
+  <div class="grid">
     {% set is_mini = label_w == '38' %}
 
     {% for p in perfumes %}
