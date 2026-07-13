@@ -317,11 +317,18 @@ async function salvarPNG() {
     const name = unique[i].dataset.pname || `etiqueta_${i+1}`;
     const safe = name.replace(/[^\w\sÀ-ɏ-]/g,'').trim().replace(/\s+/g,'_');
     // Clona a etiqueta e adiciona a medida embaixo, fora da etiqueta em si,
-    // pra facilitar a conferência do tamanho na gráfica.
+    // pra facilitar a conferência do tamanho na gráfica. O tamanho da
+    // etiqueta vem de variáveis CSS (--lw/--lh) definidas só dentro do
+    // grid original — fora dele elas não existem, então fixamos a
+    // largura/altura reais (em px) direto no clone pra não esticar.
+    const rect = unique[i].getBoundingClientRect();
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;background:#ffffff;display:inline-block;padding:6px;';
     const clone = unique[i].cloneNode(true);
     clone.style.margin = '0';
+    clone.style.width = rect.width + 'px';
+    clone.style.height = rect.height + 'px';
+    clone.style.flex = 'none';
     wrapper.appendChild(clone);
     const caption = document.createElement('div');
     caption.textContent = '{{ label_w }} x {{ label_h }} mm';
