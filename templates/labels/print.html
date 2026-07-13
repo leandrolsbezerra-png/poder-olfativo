@@ -20,7 +20,9 @@
     .btn-close { background:transparent; border:1px solid #444; color:#aaa; padding:7px 14px; border-radius:6px; cursor:pointer; font-size:13px; }
 
     .page { padding:10mm; padding-top:65px; }
-    .grid { display:flex; flex-wrap:wrap; gap:3mm; }
+    /* Grid em vez de flex-wrap: o Safari tem um bug antigo em que flexbox
+       não pagina corretamente na impressão (a página fica em branco). */
+    .grid { display:grid; grid-template-columns:repeat(auto-fill, var(--lw)); gap:3mm; }
 
     /* ── Label ── */
     .label {
