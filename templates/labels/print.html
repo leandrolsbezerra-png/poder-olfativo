@@ -152,7 +152,7 @@
 
 <div class="toolbar">
   <span>Poder Olfativo — Etiquetas</span>
-  <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
+  <button class="btn-print" id="btnPrint" onclick="imprimir()">🖨 Imprimir</button>
   <button class="btn-pdf" id="btnPdf" onclick="salvarPDF()">📄 Salvar PDF</button>
   <button class="btn-png" id="btnPng" onclick="salvarPNG()">🖼 Salvar PNG</button>
   <button class="btn-close" onclick="window.close()">Fechar</button>
@@ -233,6 +233,26 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
+async function imprimir() {
+  // Se alguma foto ainda não carregou quando o navegador manda imprimir,
+  // ele pode gerar uma página em branco. Espera tudo carregar primeiro.
+  const btn = document.getElementById('btnPrint');
+  const status = document.getElementById('pdfStatus');
+  const imgs = Array.from(document.querySelectorAll('img'));
+  const pending = imgs.filter(img => !img.complete);
+  if (pending.length) {
+    btn.disabled = true;
+    status.textContent = `Carregando ${pending.length} imagem(ns)...`;
+    await Promise.all(pending.map(img => new Promise(resolve => {
+      img.addEventListener('load', resolve, { once: true });
+      img.addEventListener('error', resolve, { once: true });
+    })));
+    btn.disabled = false;
+    status.textContent = '';
+  }
+  window.print();
+}
+
 async function salvarPDF() {
   const labels = document.querySelectorAll('.label');
   if (!labels.length) { alert('Nenhuma etiqueta.'); return; }
