@@ -296,6 +296,7 @@ def migrate_db():
         "ALTER TABLE sale_items ADD COLUMN vial_fee REAL DEFAULT 0",
         "ALTER TABLE order_items ADD COLUMN vial_fee REAL DEFAULT 0",
         "ALTER TABLE orders ADD COLUMN sale_id INTEGER REFERENCES sales(id)",
+        "ALTER TABLE perfumes ADD COLUMN style TEXT DEFAULT 'Design'",
     ]:
         try:
             db.execute(stmt)
@@ -500,12 +501,13 @@ def _save_perfume(id):
     data={k:f.get(k,'').strip() for k in ['name','concentration','gender','family','notes_top','notes_heart','notes_base','description']}
     data['brand_id']=f.get('brand_id') or None
     data['year']=f.get('year') or None
+    data['style']=f.get('style','Design').strip() or 'Design'
     if not data['name']: flash('Nome obrigatório.','danger'); return redirect(request.url)
     if id is None:
         new_id=execute_db("""INSERT INTO perfumes(brand_id,name,concentration,gender,family,
-            notes_top,notes_heart,notes_base,description,year)
+            notes_top,notes_heart,notes_base,description,year,style)
             VALUES(:brand_id,:name,:concentration,:gender,:family,
-            :notes_top,:notes_heart,:notes_base,:description,:year)""",data)
+            :notes_top,:notes_heart,:notes_base,:description,:year,:style)""",data)
         # create default decant sizes
         for size in [2.0,5.0,10.0,15.0]:
             try: execute_db("INSERT INTO decants(perfume_id,size_ml) VALUES(?,?)",(new_id,size))
@@ -516,7 +518,7 @@ def _save_perfume(id):
         data['id']=id
         execute_db("""UPDATE perfumes SET brand_id=:brand_id,name=:name,concentration=:concentration,
             gender=:gender,family=:family,notes_top=:notes_top,notes_heart=:notes_heart,
-            notes_base=:notes_base,description=:description,year=:year WHERE id=:id""",data)
+            notes_base=:notes_base,description=:description,year=:year,style=:style WHERE id=:id""",data)
         flash('Perfume atualizado!','success')
         return redirect(url_for('perfume_detail', id=id))
 
@@ -1171,7 +1173,13 @@ def labels():
         WHERE p.active=1 AND p.price_per_ml>0
         ORDER BY b.name,p.name
     """)
-    return render_template('labels/index.html', perfumes=perfumes_list)
+    brands_used = query_db("""
+        SELECT DISTINCT b.id,b.name
+        FROM perfumes p JOIN brands b ON b.id=p.brand_id
+        WHERE p.active=1 AND p.price_per_ml>0
+        ORDER BY b.name
+    """)
+    return render_template('labels/index.html', perfumes=perfumes_list, brands=brands_used)
 
 @app.route('/etiquetas/imprimir')
 def labels_print():

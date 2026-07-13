@@ -31,10 +31,36 @@
     </div>
   </div>
 
+  <!-- Filtros -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small fw-semibold mb-1">Filtrar por estilo</label>
+          <div class="d-flex gap-2 flex-wrap" id="styleTabs">
+            <button type="button" class="btn btn-sm btn-dark" data-style="">Todos</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-style="Design">Design</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-style="Árabe">Árabe</button>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold mb-1">Filtrar por marca</label>
+          <select class="form-select form-select-sm" id="brandFilter" onchange="filterGrid()">
+            <option value="">Todas as marcas</option>
+            {% for b in brands %}
+            <option value="{{ b.id }}">{{ b.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 text-muted small" id="filterCount"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Perfume grid -->
-  <div class="row g-3">
+  <div class="row g-3" id="perfumeGrid">
     {% for p in perfumes %}
-    <div class="col-md-4 col-lg-3">
+    <div class="col-md-4 col-lg-3 perfume-col" data-style="{{ p.style or 'Design' }}" data-brand="{{ p.brand_id or '' }}">
       <label class="card h-100 p-0" style="cursor:pointer;border:2px solid transparent" id="card_{{ p.id }}"
              onclick="toggleCard({{ p.id }})">
         <input type="checkbox" name="ids" value="{{ p.id }}" class="perfume-check d-none" id="chk_{{ p.id }}">
@@ -81,11 +107,38 @@ function toggleCard(id) {
   card.style.background = chk.checked ? '#fffdf8' : '';
 }
 function selectAll() {
-  document.querySelectorAll('.perfume-check').forEach(c => {
+  document.querySelectorAll('.perfume-col').forEach(col => {
+    if (col.style.display === 'none') return;
+    const c = col.querySelector('.perfume-check');
     c.checked = true;
     document.getElementById('card_'+c.value).style.borderColor = '#c9a96e';
     document.getElementById('card_'+c.value).style.background = '#fffdf8';
   });
 }
+
+let currentStyle = '';
+function filterGrid() {
+  const brand = document.getElementById('brandFilter').value;
+  let visible = 0;
+  document.querySelectorAll('.perfume-col').forEach(col => {
+    const styleOk = !currentStyle || col.dataset.style === currentStyle;
+    const brandOk = !brand || col.dataset.brand === brand;
+    const show = styleOk && brandOk;
+    col.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('filterCount').textContent = `${visible} perfume(s) visível(is)`;
+}
+document.getElementById('styleTabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-style]');
+  if (!btn) return;
+  currentStyle = btn.dataset.style;
+  document.querySelectorAll('#styleTabs button').forEach(b => {
+    b.classList.remove('btn-dark'); b.classList.add('btn-outline-secondary');
+  });
+  btn.classList.remove('btn-outline-secondary'); btn.classList.add('btn-dark');
+  filterGrid();
+});
+filterGrid();
 </script>
 {% endblock %}

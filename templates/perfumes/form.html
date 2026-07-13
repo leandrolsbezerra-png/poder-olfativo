@@ -41,6 +41,14 @@
               <label class="form-label fw-semibold">Ano</label>
               <input type="number" name="year" class="form-control" value="{{ perfume.year if perfume else '' }}" placeholder="Ex: 2020" min="1900" max="2030">
             </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Estilo</label>
+              <select name="style" class="form-select">
+                {% for st in ['Design','Árabe'] %}
+                <option value="{{ st }}" {{ 'selected' if perfume and perfume.style==st or (not perfume and st=='Design') }}>{{ st }}</option>
+                {% endfor %}
+              </select>
+            </div>
             <div class="col-12">
               <label class="form-label fw-semibold">Família Olfativa</label>
               <select name="family" class="form-select">
