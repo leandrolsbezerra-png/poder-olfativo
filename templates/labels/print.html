@@ -92,7 +92,7 @@
     .header-text { padding-right:14.5mm; }
     .brand-name  { font-size:6pt; color:#999; text-transform:uppercase; letter-spacing:0; }
     .perfume-name{ font-size:9pt; font-weight:800; color:#1a1a2e; line-height:1.15; margin:0.3mm 0; }
-    .conc-family { font-size:6pt; color:#888; }
+    .conc-family { font-size:6pt; color:#555; font-weight:600; }
 
     /* ── Espaço para anotar o ml exato à mão ── */
     .sizes-section { padding-top:1.5mm; margin-top:auto; display:flex; align-items:center; gap:1.5mm; justify-content:center; }
@@ -190,7 +190,7 @@
           <div class="header-text">
             <div class="brand-name">{{ p.brand_name }}</div>
             <div class="perfume-name">{{ p.name }}</div>
-            <div class="conc-family">{{ p.concentration }}{% if p.family %} · {{ p.family }}{% endif %}</div>
+            <div class="conc-family">{{ p.concentration }}</div>
           </div>
 
           {% if is_mini %}
