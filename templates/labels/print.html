@@ -135,19 +135,19 @@
     .handle { font-size:6pt; color:#e0c088; font-weight:700; letter-spacing:.2px; line-height:1; }
     .ig-icon { width:12pt; height:12pt; object-fit:contain; flex-shrink:0; display:block; }
 
-    /* ── MINI (43×35mm) ── */
-    .label.mini .label-photo  { width:38%; }
-    .label.mini .label-content{ padding:1.5mm 2mm 1.5mm 2mm; }
+    /* ── MINI (40×30mm) ── */
+    .label.mini .label-photo  { width:36%; }
+    .label.mini .label-content{ padding:1.3mm 1.8mm 1.3mm 1.8mm; }
     .label.mini .header-text  { padding-right:9.5mm; }
-    .label.mini .brand-name   { font-size:5.5pt; }
-    .label.mini .perfume-name { font-size:7.5pt; }
-    .label.mini .conc-family  { font-size:5.5pt; }
-    .label.mini .sizes-section{ padding-top:1.5mm; gap:1.5mm; }
-    .label.mini .ml-blank     { min-width:8mm; height:3mm; }
-    .label.mini .size-text    { font-size:7pt; }
-    .label.mini .ml-rate      { font-size:5.5pt; }
-    .label.mini .label-footer { padding:.7mm 1.2mm; }
-    .label.mini .handle       { font-size:6pt; }
+    .label.mini .brand-name   { font-size:5pt; }
+    .label.mini .perfume-name { font-size:7pt; }
+    .label.mini .conc-family  { font-size:5pt; }
+    .label.mini .sizes-section{ padding-top:1.3mm; gap:1.3mm; }
+    .label.mini .ml-blank     { min-width:7mm; height:2.6mm; }
+    .label.mini .size-text    { font-size:6.5pt; }
+    .label.mini .ml-rate      { font-size:5pt; }
+    .label.mini .label-footer { padding:.6mm 1.2mm; }
+    .label.mini .handle       { font-size:5.5pt; }
     .label.mini .ig-icon      { width:9pt; height:9pt; }
 
     @media print {
@@ -172,7 +172,7 @@
 
 <div class="page">
   <div class="grid">
-    {% set is_mini = label_w == '43' %}
+    {% set is_mini = label_w == '40' %}
 
     {% for p in perfumes %}
     {% set photo_src = photo_b64.get(p.id, '') %}
@@ -279,7 +279,7 @@ async function salvarPDF() {
   // ainda bem acima dos ~300dpi que uma gráfica pede. A Mini (38x21mm) é
   // fisicamente pequena, então sobra muita margem de canvas — usa escala
   // bem mais alta que os outros tamanhos pra sair com resolução máxima.
-  const IS_MINI = '{{ label_w }}' === '43';
+  const IS_MINI = '{{ label_w }}' === '40';
   const SCALE = IS_MINI
     ? (labels.length > 400 ? 14 : (labels.length > 120 ? 20 : 30))
     : (labels.length > 400 ? 8 : (labels.length > 120 ? 12 : 18));
@@ -347,7 +347,7 @@ async function salvarPNG() {
   // pequena, aumentar a escala só amplia o borrão, não adiciona detalhe.
   // A Mini (38x21mm) é fisicamente pequena, então sobra muita margem de
   // canvas — usa escala bem mais alta que os outros tamanhos.
-  const IS_MINI = '{{ label_w }}' === '43';
+  const IS_MINI = '{{ label_w }}' === '40';
   const SCALE = IS_MINI
     ? (unique.length > 60 ? 24 : 40)
     : (unique.length > 60 ? 14 : 20);
