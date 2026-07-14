@@ -172,7 +172,7 @@
 
 <div class="page">
   <div class="grid">
-    {% set is_mini = label_w == '42' %}
+    {% set is_mini = label_w == '40.1' %}
 
     {% for p in perfumes %}
     {% set photo_src = photo_b64.get(p.id, '') %}
@@ -279,7 +279,7 @@ async function salvarPDF() {
   // ainda bem acima dos ~300dpi que uma gráfica pede. A Mini (38x21mm) é
   // fisicamente pequena, então sobra muita margem de canvas — usa escala
   // bem mais alta que os outros tamanhos pra sair com resolução máxima.
-  const IS_MINI = '{{ label_w }}' === '42';
+  const IS_MINI = '{{ label_w }}' === '40.1';
   const SCALE = IS_MINI
     ? (labels.length > 400 ? 14 : (labels.length > 120 ? 20 : 30))
     : (labels.length > 400 ? 8 : (labels.length > 120 ? 12 : 18));
@@ -347,7 +347,7 @@ async function salvarPNG() {
   // pequena, aumentar a escala só amplia o borrão, não adiciona detalhe.
   // A Mini (38x21mm) é fisicamente pequena, então sobra muita margem de
   // canvas — usa escala bem mais alta que os outros tamanhos.
-  const IS_MINI = '{{ label_w }}' === '42';
+  const IS_MINI = '{{ label_w }}' === '40.1';
   const SCALE = IS_MINI
     ? (unique.length > 60 ? 24 : 40)
     : (unique.length > 60 ? 14 : 20);
