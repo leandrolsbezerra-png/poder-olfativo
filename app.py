@@ -1,7 +1,6 @@
 import sqlite3, os, json, webbrowser, threading, time
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, g, session
-from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, g
 
 # Fixa o fuso horário em Brasília — sem isso, o servidor (geralmente em UTC) grava
 # datetime('now','localtime') em UTC, e uma venda feita à noite pode "pular" pro dia
@@ -311,39 +310,6 @@ def migrate_db():
 # Run on module load so gunicorn workers also initialize the DB
 init_db()
 migrate_db()
-
-# ──────────────────────────── Auth ────────────────────────────
-
-APP_USER     = os.environ.get('APP_USER', 'admin')
-APP_PASSWORD = os.environ.get('APP_PASSWORD', 'poderolfativo123')
-
-@app.before_request
-def require_login():
-    public = {'login', 'logout', 'static'}
-    if request.endpoint and request.endpoint not in public:
-        if not session.get('logged_in'):
-            return redirect(url_for('login', next=request.url))
-
-@app.route('/login', methods=['GET','POST'])
-def login():
-    if session.get('logged_in'):
-        return redirect(url_for('dashboard'))
-    error = None
-    if request.method == 'POST':
-        user = request.form.get('username','').strip()
-        pwd  = request.form.get('password','')
-        if user == APP_USER and pwd == APP_PASSWORD:
-            session.permanent = True
-            session['logged_in'] = True
-            session['username'] = user
-            return redirect(request.form.get('next') or url_for('dashboard'))
-        error = 'Usuário ou senha incorretos.'
-    return render_template('login.html', error=error)
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
 
 
 # ──────────────────────────── Context ────────────────────────────
