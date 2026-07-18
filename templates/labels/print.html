@@ -259,6 +259,19 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
+async function preloadImgs() {
+  const imgs = Array.from(document.querySelectorAll('img'));
+  await Promise.all(imgs.map(img => {
+    if (img.complete && img.naturalWidth > 0) {
+      return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+    }
+    return new Promise(resolve => {
+      img.addEventListener('load', () => { img.decode ? img.decode().catch(resolve).then(resolve) : resolve(); }, { once: true });
+      img.addEventListener('error', resolve, { once: true });
+    });
+  }));
+}
+
 async function imprimir() {
   // Se alguma foto ainda não carregou quando o navegador manda imprimir,
   // ele pode gerar uma página em branco. Espera tudo carregar primeiro.
@@ -284,7 +297,9 @@ async function salvarPDF() {
   if (!labels.length) { alert('Nenhuma etiqueta.'); return; }
   const btn = document.getElementById('btnPdf');
   const status = document.getElementById('pdfStatus');
-  btn.disabled = true; btn.textContent = '⏳ Gerando...';
+  btn.disabled = true; btn.textContent = '⏳ Carregando imagens...';
+  await preloadImgs();
+  btn.textContent = '⏳ Gerando...';
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: false });
@@ -347,7 +362,9 @@ async function salvarPNG() {
   if (!labels.length) { alert('Nenhuma etiqueta.'); return; }
   const btn = document.getElementById('btnPng');
   const status = document.getElementById('pdfStatus');
-  btn.disabled = true; btn.textContent = '⏳ Gerando...';
+  btn.disabled = true; btn.textContent = '⏳ Carregando imagens...';
+  await preloadImgs();
+  btn.textContent = '⏳ Gerando...';
 
   // Todas as cópias do mesmo perfume são idênticas — gera um PNG por
   // perfume (não um por cópia), nomeado com o nome do perfume.
