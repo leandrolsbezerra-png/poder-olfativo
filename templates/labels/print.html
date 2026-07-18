@@ -396,24 +396,20 @@ async function salvarPNG() {
     // largura/altura reais (em px) direto no clone pra não esticar.
     const rect = unique[i].getBoundingClientRect();
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;background:#ffffff;display:inline-block;padding:6px;';
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;display:inline-block;';
     const clone = unique[i].cloneNode(true);
     clone.style.margin = '0';
     clone.style.width = rect.width + 'px';
     clone.style.height = rect.height + 'px';
     clone.style.flex = 'none';
     wrapper.appendChild(clone);
-    const caption = document.createElement('div');
-    caption.textContent = '{{ label_w }} x {{ label_h }} mm';
-    caption.style.cssText = 'font-family:Arial,sans-serif;font-size:11px;color:#000;text-align:center;padding-top:5px;';
-    wrapper.appendChild(caption);
     document.body.appendChild(wrapper);
     try {
       const canvas = await html2canvas(wrapper, {
         scale: SCALE,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
+        backgroundColor: null,
         logging: false,
         imageTimeout: 0,
       });
