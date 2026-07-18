@@ -172,7 +172,7 @@
 
 <div class="page">
   <div class="grid">
-    {% set is_mini = label_w == '38' %}
+    {% set is_mini = label_w in ('38', '45.7') %}
 
     {% for p in perfumes %}
     {% set photo_src = photo_b64.get(p.id, '') %}
