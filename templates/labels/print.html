@@ -418,7 +418,7 @@ async function salvarPNG() {
         imageTimeout: 0,
       });
       const link = document.createElement('a');
-      link.download = `etiquetas/${safe}.png`;
+      link.download = `etiquetas novas/${safe}.png`;
       link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
       count++;
