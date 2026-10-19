@@ -4,9 +4,13 @@ Base dos 186 perfumes do lote "Novas Etiquetas" (links do Fragrantica).
 Campos: (frag_id, marca, nome, concentracao, genero, estilo, revisar)
 
 - frag_id      : ID do perfume no Fragrantica (vem da propria URL; e o nome do arquivo da foto)
-- concentracao : o Fragrantica NAO expoe esse campo. Quando a propria URL traz
-                 ("...-Eau-de-Parfum-84094"), o valor e certo. Nos outros casos vem
-                 do nome oficial do produto e esta marcado com revisar=True.
+- concentracao : o Fragrantica NAO expoe esse campo. Foi obtida, nesta ordem:
+                 1) do nome oficial ("...-Eau-de-Parfum-84094");
+                 2) lendo o texto impresso na foto do frasco (foi assim que se
+                    descobriu, p.ex., que Mancera Intense Cedrat Boise e
+                    Extrait, nao EDP);
+                 3) nao aparecendo em nenhum dos dois, usou-se o padrao da
+                    linha (quase sempre EDP) e marcou-se revisar=True.
 - revisar      : True = conferir antes de mandar pra grafica (ver relatorio_revisao.py)
 """
 
@@ -29,7 +33,7 @@ PERFUMES = [
     ("83842",  "Maison Crivelli",         "Oud Maracuja",                            "EDP",     "Unissex",   "Design", False),
     ("76683",  "Xerjoff",                 "Erba Gold",                               "EDP",     "Unissex",   "Design", False),
     ("84224",  "Ex Nihilo",               "Blue Talisman",                           "EDP",     "Unissex",   "Design", False),
-    ("81839",  "Roja Parfums",            "Elysium Pour Homme Eau Intense",          "EDP",     "Masculino", "Design", True),
+    ("81839",  "Roja Parfums",            "Elysium Pour Homme Eau Intense",          "Eau Intense",     "Masculino", "Design", False),
     ("66097",  "Initio Parfums Privés",   "Musk Therapy",                            "EDP",     "Unissex",   "Design", False),
     ("16938",  "Parfums de Marly",        "Pegasus",                                 "EDP",     "Masculino", "Design", False),
     ("39314",  "Parfums de Marly",        "Layton",                                  "EDP",     "Unissex",   "Design", False),
@@ -64,7 +68,7 @@ PERFUMES = [
     ("51037",  "Parfums de Marly",        "Percival",                                "EDP",     "Masculino", "Design", False),
     ("90199",  "Parfums de Marly",        "Perseus",                                 "EDP",     "Masculino", "Design", True),
     ("474",    "Creed",                   "Green Irish Tweed",                       "EDP",     "Masculino", "Design", False),
-    ("72796",  "Mancera",                 "Intense Cedrat Boise",                    "EDP",     "Unissex",   "Design", True),
+    ("72796",  "Mancera",                 "Intense Cedrat Boise",                    "Extrait",     "Unissex",   "Design", False),
     ("62251",  "Louis Vuitton",           "Météore",                                 "EDP",     "Masculino", "Design", False),
     ("68357",  "Louis Vuitton",           "Symphony",                                "EDP",     "Unissex",   "Design", False),
     ("75927",  "Sospiro Perfumes",        "Basso",                                   "EDP",     "Unissex",   "Design", False),
@@ -72,24 +76,24 @@ PERFUMES = [
     ("67039",  "Creed",                   "Viking Cologne",                          "Cologne", "Masculino", "Design", False),
     ("6310",   "Casamorati 1888",         "Mefisto",                                 "EDP",     "Masculino", "Design", False),
     ("116848", "Sospiro Perfumes",        "Mezzo",                                   "EDP",     "Unissex",   "Design", False),
-    ("103313", "Sospiro Perfumes",        "Il Padrino",                              "EDP",     "Masculino", "Design", True),
+    ("103313", "Sospiro Perfumes",        "Il Padrino",                              "EDP",     "Masculino", "Design", False),
     ("72381",  "Stéphane Humbert Lucas 777", "God of Fire",                          "EDP",     "Unissex",   "Design", True),
     ("1825",   "Tom Ford",                "Tobacco Vanille",                         "EDP",     "Unissex",   "Design", False),
     ("46066",  "Maison Francis Kurkdjian","Baccarat Rouge 540 Extrait",              "Extrait", "Unissex",   "Design", False),
     ("33519",  "Maison Francis Kurkdjian","Baccarat Rouge 540",                      "EDP",     "Unissex",   "Design", False),
     ("56273",  "Parfums de Marly",        "Sedley",                                  "EDP",     "Unissex",   "Design", False),
     ("62101",  "Parfums de Marly",        "Greenley",                                "EDP",     "Unissex",   "Design", False),
-    ("80462",  "Nishane",                 "Hacivat X",                               "Extrait", "Unissex",   "Design", True),
+    ("80462",  "Nishane",                 "Hacivat X",                               "Extrait", "Unissex",   "Design", False),
     ("29675",  "Tom Ford",                "Noir Extreme",                            "EDP",     "Masculino", "Design", False),
     ("66229",  "Loewe",                   "7 Cobalt",                                "EDP",     "Masculino", "Design", False),
     ("30567",  "Nishane",                 "Wulong Cha",                              "Extrait", "Unissex",   "Design", False),
-    ("80465",  "Nishane",                 "Wulong Cha X",                            "Extrait", "Unissex",   "Design", True),
-    ("80464",  "Nishane",                 "Ani X",                                   "Extrait", "Unissex",   "Design", True),
+    ("80465",  "Nishane",                 "Wulong Cha X",                            "Extrait", "Unissex",   "Design", False),
+    ("80464",  "Nishane",                 "Ani X",                                   "Extrait", "Unissex",   "Design", False),
     ("37603",  "Nishane",                 "Fan Your Flames",                         "Extrait", "Unissex",   "Design", False),
     ("54786",  "Nishane",                 "Nefs",                                    "Extrait", "Unissex",   "Design", False),
-    ("80463",  "Nishane",                 "Hundred Silent Ways X",                   "Extrait", "Unissex",   "Design", True),
+    ("80463",  "Nishane",                 "Hundred Silent Ways X",                   "Extrait", "Unissex",   "Design", False),
     ("30581",  "Nishane",                 "Tuberoza",                                "Extrait", "Unissex",   "Design", False),
-    ("70388",  "Nishane",                 "Favonius",                                "Extrait", "Unissex",   "Design", True),
+    ("70388",  "Nishane",                 "Favonius",                                "Extrait", "Unissex",   "Design", False),
     ("136741", "Rabanne",                 "1 Million Black",                         "Parfum",  "Masculino", "Design", True),
     ("68415",  "Dior",                    "Sauvage Elixir",                          "Elixir",  "Masculino", "Design", False),
     ("95863",  "Dior",                    "Sauvage Eau Forte",                       "Eau Forte", "Masculino", "Design", False),
@@ -107,7 +111,7 @@ PERFUMES = [
     ("72",     "Kenzo",                   "Flower by Kenzo",                         "EDP",     "Feminino",  "Design", False),
     ("95640",  "Rabanne",                 "Million Gold For Her",                    "EDP",     "Feminino",  "Design", True),
     ("74962",  "Rabanne",                 "Fame",                                    "EDP",     "Feminino",  "Design", False),
-    ("74636",  "Mancera",                 "French Riviera",                          "EDP",     "Unissex",   "Design", True),
+    ("74636",  "Mancera",                 "French Riviera",                          "EDP",     "Unissex",   "Design", False),
     ("40069",  "Chanel",                  "N°5",                                     "EDP",     "Feminino",  "Design", False),
     ("9045",   "Rabanne",                 "Lady Million",                            "EDP",     "Feminino",  "Design", False),
     ("44035",  "Dolce & Gabbana",         "Light Blue Eau Intense Pour Homme",       "EDP",     "Masculino", "Design", False),
