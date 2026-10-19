@@ -36,7 +36,7 @@
   <div class="card mb-3">
     <div class="card-body py-2">
       <div class="row g-3 align-items-end">
-        <div class="col-md-5">
+        <div class="col-md-3">
           <label class="form-label small fw-semibold mb-1">Filtrar por estilo</label>
           <div class="d-flex gap-2 flex-wrap" id="styleTabs">
             <button type="button" class="btn btn-sm btn-dark" data-style="">Todos</button>
@@ -44,7 +44,20 @@
             <button type="button" class="btn btn-sm btn-outline-secondary" data-style="Árabe">Árabe</button>
           </div>
         </div>
+        {% if batches %}
         <div class="col-md-4">
+          <label class="form-label small fw-semibold mb-1">Filtrar por lote</label>
+          <div class="d-flex gap-2 flex-wrap" id="batchTabs">
+            <button type="button" class="btn btn-sm btn-dark" data-batch="">Todos os lotes</button>
+            {% for lt in batches %}
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-batch="{{ lt.batch }}">
+              {{ lt.batch }} <span class="opacity-75">({{ lt.n }})</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        <div class="col-md-3">
           <label class="form-label small fw-semibold mb-1">Filtrar por marca</label>
           <select class="form-select form-select-sm" id="brandFilter" onchange="filterGrid()">
             <option value="">Todas as marcas</option>
@@ -53,7 +66,7 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-md-3 text-muted small" id="filterCount"></div>
+        <div class="col-md-2 text-muted small text-md-end" id="filterCount"></div>
       </div>
     </div>
   </div>
@@ -61,7 +74,7 @@
   <!-- Perfume grid -->
   <div class="row g-3" id="perfumeGrid">
     {% for p in perfumes %}
-    <div class="col-md-4 col-lg-3 perfume-col" data-style="{{ p.style or 'Design' }}" data-brand="{{ p.brand_id or '' }}">
+    <div class="col-md-4 col-lg-3 perfume-col" data-style="{{ p.style or 'Design' }}" data-brand="{{ p.brand_id or '' }}" data-batch="{{ p.batch or '' }}">
       <label class="card h-100 p-0" style="cursor:pointer;border:2px solid transparent" id="card_{{ p.id }}"
              onclick="toggleCard({{ p.id }})">
         <input type="checkbox" name="ids" value="{{ p.id }}" class="perfume-check d-none" id="chk_{{ p.id }}">
@@ -118,28 +131,37 @@ function selectAll() {
 }
 
 let currentStyle = '';
+let currentBatch = '';
 function filterGrid() {
   const brand = document.getElementById('brandFilter').value;
   let visible = 0;
   document.querySelectorAll('.perfume-col').forEach(col => {
     const styleOk = !currentStyle || col.dataset.style === currentStyle;
     const brandOk = !brand || col.dataset.brand === brand;
-    const show = styleOk && brandOk;
+    const batchOk = !currentBatch || col.dataset.batch === currentBatch;
+    const show = styleOk && brandOk && batchOk;
     col.style.display = show ? '' : 'none';
     if (show) visible++;
   });
   document.getElementById('filterCount').textContent = `${visible} perfume(s) visível(is)`;
 }
-document.getElementById('styleTabs').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-style]');
-  if (!btn) return;
-  currentStyle = btn.dataset.style;
-  document.querySelectorAll('#styleTabs button').forEach(b => {
-    b.classList.remove('btn-dark'); b.classList.add('btn-outline-secondary');
+
+function wireTabs(containerId, attr, onPick) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+  box.addEventListener('click', (e) => {
+    const btn = e.target.closest(`button[data-${attr}]`);
+    if (!btn) return;
+    onPick(btn.dataset[attr]);
+    box.querySelectorAll('button').forEach(b => {
+      b.classList.remove('btn-dark'); b.classList.add('btn-outline-secondary');
+    });
+    btn.classList.remove('btn-outline-secondary'); btn.classList.add('btn-dark');
+    filterGrid();
   });
-  btn.classList.remove('btn-outline-secondary'); btn.classList.add('btn-dark');
-  filterGrid();
-});
+}
+wireTabs('styleTabs', 'style', v => currentStyle = v);
+wireTabs('batchTabs', 'batch', v => currentBatch = v);
 filterGrid();
 </script>
 {% endblock %}

@@ -8,3 +8,6 @@ __pycache__/
 nohup.out
 *.log
 .DS_Store
+
+# config local do preview (caminho do venv e porta sao desta maquina)
+.claude/
