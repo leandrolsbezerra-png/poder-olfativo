@@ -296,7 +296,6 @@ def migrate_db():
         "ALTER TABLE order_items ADD COLUMN vial_fee REAL DEFAULT 0",
         "ALTER TABLE orders ADD COLUMN sale_id INTEGER REFERENCES sales(id)",
         "ALTER TABLE perfumes ADD COLUMN style TEXT DEFAULT 'Design'",
-        "ALTER TABLE perfumes ADD COLUMN batch TEXT DEFAULT ''",
     ]:
         try:
             db.execute(stmt)
@@ -1146,12 +1145,17 @@ def labels():
         WHERE p.active=1 AND p.price_per_ml>0
         ORDER BY b.name
     """)
-    batches = query_db("""
-        SELECT batch, COUNT(*) n
-        FROM perfumes
-        WHERE active=1 AND price_per_ml>0 AND COALESCE(batch,'')<>''
-        GROUP BY batch ORDER BY batch
-    """)
+    # a coluna batch é criada por add_novas_etiquetas.py; até lá a página
+    # funciona normalmente, só sem o filtro por lote
+    try:
+        batches = query_db("""
+            SELECT batch, COUNT(*) n
+            FROM perfumes
+            WHERE active=1 AND price_per_ml>0 AND COALESCE(batch,'')<>''
+            GROUP BY batch ORDER BY batch
+        """)
+    except sqlite3.OperationalError:
+        batches = []
     return render_template('labels/index.html', perfumes=perfumes_list,
                            brands=brands_used, batches=batches)
 
